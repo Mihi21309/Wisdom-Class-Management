@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "181662988899",
+    "project_id": "wisdom-class-management",
+    "storage_bucket": "wisdom-class-management.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:181662988899:android:119a9abea6cb6060ab1656",
+        "android_client_info": {
+          "package_name": "com.example.wisdom_class_management"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDd4zxjIZEW6NSJC1U8rj65BxjN9AHqL_A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
