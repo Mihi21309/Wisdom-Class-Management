@@ -1,0 +1,1538 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+--primary:#1E40AF;--primary-light:#DBEAFE;--primary-dark:#1e3a8a;
+--secondary:#F59E0B;--secondary-light:#FEF3C7;
+--bg:#F8FAFC;--white:#fff;--card:#fff;
+--text:#0F172A;--text2:#475569;--text3:#94A3B8;
+--border:#E2E8F0;--border2:#CBD5E1;
+--success:#10B981;--success-bg:#D1FAE5;
+--danger:#EF4444;--danger-bg:#FEE2E2;
+--warn:#F59E0B;--warn-bg:#FEF3C7;
+--radius:12px;--radius-sm:8px;--radius-lg:16px;--radius-xl:20px;
+--shadow:0 2px 8px rgba(30,64,175,0.08);--shadow2:0 4px 16px rgba(30,64,175,0.12);
+}
+body{font-family:'Poppins',sans-serif;background:#e8edf5;display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem;min-height:100vh}
+.phone-wrap{position:relative;width:360px;flex-shrink:0}
+.phone-frame{width:360px;height:800px;background:#1a1a2e;border-radius:36px;padding:12px;box-shadow:0 20px 60px rgba(0,0,0,0.4),0 0 0 1px #2d2d50;position:relative;overflow:hidden}
+.phone-screen{width:100%;height:100%;background:var(--bg);border-radius:26px;overflow:hidden;position:relative}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:28px;background:#1a1a2e;border-radius:0 0 16px 16px;z-index:100}
+.status-bar{height:28px;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:10px;font-weight:600;color:var(--text2);position:relative;z-index:99}
+.screen{position:absolute;inset:0;background:var(--bg);overflow-y:auto;overflow-x:hidden;display:none;scrollbar-width:none}
+.screen::-webkit-scrollbar{display:none}
+.screen.active{display:block}
+.screen-inner{padding-bottom:80px}
+
+/* Splash */
+.splash{background:linear-gradient(160deg,#1E40AF 0%,#1e3a8a 50%,#1a1a6e 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#fff;gap:20px}
+.splash-logo{width:80px;height:80px;background:rgba(255,255,255,0.15);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:36px;backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,0.25)}
+.splash-title{font-size:22px;font-weight:700;text-align:center;letter-spacing:-0.5px}
+.splash-sub{font-size:11px;font-weight:400;opacity:0.8;letter-spacing:1px;text-transform:uppercase}
+.splash-divider{width:40px;height:3px;background:var(--secondary);border-radius:2px}
+.loader-dots{display:flex;gap:8px;margin-top:8px}
+.dot{width:8px;height:8px;background:rgba(255,255,255,0.5);border-radius:50%;animation:dotPulse 1.2s ease-in-out infinite}
+.dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+@keyframes dotPulse{0%,80%,100%{transform:scale(1);opacity:.5}40%{transform:scale(1.3);opacity:1}}
+
+/* App Bar */
+.app-bar{background:var(--white);padding:14px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+.app-bar-title{font-size:16px;font-weight:600;color:var(--text);flex:1}
+.app-bar-icon{width:36px;height:36px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid var(--border)}
+.back-btn{width:32px;height:32px;border-radius:9px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+
+/* Colored app bars */
+.app-bar-primary{background:var(--primary);padding:14px 20px;display:flex;align-items:center;gap:12px}
+.app-bar-primary .app-bar-title{color:#fff}
+.app-bar-primary .back-btn{background:rgba(255,255,255,0.2)}
+
+/* Bottom Nav */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:360px;background:var(--white);border-top:1px solid var(--border);display:flex;padding:8px 0 12px;z-index:200;border-radius:0 0 26px 26px}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0}
+.nav-icon{font-size:20px;color:var(--text3)}
+.nav-label{font-size:9px;color:var(--text3);font-weight:500}
+.nav-item.active .nav-icon{color:var(--primary)}
+.nav-item.active .nav-label{color:var(--primary)}
+.nav-dot{width:4px;height:4px;border-radius:2px;background:var(--primary);margin-top:1px}
+
+/* Cards */
+.card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);padding:16px;box-shadow:var(--shadow)}
+.card-sm{background:var(--white);border-radius:var(--radius-sm);border:1px solid var(--border);padding:12px}
+
+/* Form Fields */
+.field-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.field-label{font-size:12px;font-weight:600;color:var(--text2)}
+.field-input{height:44px;border:1.5px solid var(--border2);border-radius:var(--radius-sm);padding:0 14px;font-family:'Poppins',sans-serif;font-size:13px;color:var(--text);background:var(--white);outline:none;width:100%}
+.field-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+.field-input-icon{position:relative}
+.field-input-icon input{padding-left:40px}
+.field-input-icon .fi-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--text3)}
+
+/* Buttons */
+.btn{height:46px;border-radius:var(--radius-sm);font-family:'Poppins',sans-serif;font-weight:600;font-size:14px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s}
+.btn:active{opacity:.85}
+.btn-primary{background:var(--primary);color:#fff;width:100%}
+.btn-secondary{background:var(--secondary);color:#fff;width:100%}
+.btn-outline{background:transparent;color:var(--primary);border:1.5px solid var(--primary);width:100%}
+.btn-sm{height:34px;border-radius:var(--radius-sm);font-family:'Poppins',sans-serif;font-weight:600;font-size:12px;border:none;cursor:pointer;padding:0 14px;display:inline-flex;align-items:center;gap:5px}
+.btn-sm-primary{background:var(--primary);color:#fff}
+.btn-sm-secondary{background:var(--secondary-light);color:#7c5300}
+.btn-sm-success{background:var(--success-bg);color:#065f46}
+.btn-sm-danger{background:var(--danger-bg);color:#991b1b}
+.btn-sm-outline{background:transparent;border:1px solid var(--border2);color:var(--text2)}
+
+/* Tags / Badges */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600}
+.badge-primary{background:var(--primary-light);color:var(--primary)}
+.badge-success{background:var(--success-bg);color:#065f46}
+.badge-warn{background:var(--warn-bg);color:#92400e}
+.badge-danger{background:var(--danger-bg);color:#991b1b}
+.badge-gray{background:#F1F5F9;color:var(--text2)}
+
+/* Profile header */
+.profile-header{background:linear-gradient(135deg,var(--primary) 0%,#1e3a8a 100%);padding:20px;padding-top:10px;color:#fff}
+.avatar{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0}
+.avatar-lg{width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700}
+
+/* Stats Grid */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);padding:14px;box-shadow:var(--shadow)}
+.stat-value{font-size:24px;font-weight:700;color:var(--text);line-height:1}
+.stat-label{font-size:11px;color:var(--text2);margin-top:4px}
+.stat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:8px}
+
+/* Progress bar */
+.progress-track{height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width .3s}
+.progress-primary{background:var(--primary)}
+.progress-success{background:var(--success)}
+.progress-warn{background:var(--warn)}
+.progress-danger{background:var(--danger)}
+
+/* Section headers */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sec-title{font-size:14px;font-weight:700;color:var(--text)}
+.sec-link{font-size:12px;color:var(--primary);font-weight:500;cursor:pointer}
+
+/* List items */
+.list-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.list-item:last-child{border-bottom:none}
+.list-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+
+/* Search bar */
+.search-bar{background:var(--white);border:1.5px solid var(--border2);border-radius:var(--radius-sm);height:42px;display:flex;align-items:center;padding:0 14px;gap:10px}
+.search-bar input{flex:1;border:none;outline:none;font-family:'Poppins',sans-serif;font-size:13px;color:var(--text);background:transparent}
+.search-bar .ti{font-size:18px;color:var(--text3)}
+
+/* Class card */
+.class-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow)}
+.class-banner{height:80px;display:flex;align-items:center;padding:0 16px;gap:12px}
+.class-body{padding:12px 16px}
+
+/* Toggle */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.toggle{width:42px;height:24px;border-radius:12px;background:var(--border);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--success)}
+.toggle-knob{width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.toggle.on .toggle-knob{left:21px}
+
+/* Misc */
+.divider{height:1px;background:var(--border);margin:12px 0}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:1.5px solid var(--border2);font-size:11px;font-weight:500;cursor:pointer;color:var(--text2)}
+.chip.selected{border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
+.color-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.row{display:flex;align-items:center}
+.row-between{display:flex;align-items:center;justify-content:space-between}
+.col{display:flex;flex-direction:column}
+.gap-4{gap:4px}.gap-8{gap:8px}.gap-12{gap:12px}
+.mt4{margin-top:4px}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+.p16{padding:16px}.p20{padding:0 20px}.ph20{padding:0 20px}
+.pt0{padding-top:0}
+.bold{font-weight:700}.semi{font-weight:600}.med{font-weight:500}
+.text-xs{font-size:11px}.text-sm{font-size:12px}.text-base{font-size:14px}.text-lg{font-size:16px}
+.text-primary{color:var(--primary)}.text-secondary{color:var(--text2)}.text-muted{color:var(--text3)}
+.text-success{color:var(--success)}.text-danger{color:var(--danger)}.text-warn{color:var(--warn)}
+.text-white{color:#fff}
+.w-full{width:100%}
+.flex-1{flex:1}
+.quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.qa-item{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+.qa-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px}
+.qa-label{font-size:9px;font-weight:600;color:var(--text2);text-align:center}
+.notif-card{background:var(--white);border-radius:var(--radius-sm);border:1px solid var(--border);padding:12px;display:flex;gap:10px;align-items:flex-start}
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;margin-top:4px}
+.table-wrap{overflow-x:auto}
+table.data-table{width:100%;border-collapse:collapse;font-size:11px}
+table.data-table th{background:#F1F5F9;color:var(--text2);font-weight:600;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)}
+table.data-table td{padding:10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.chart-bar-container{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.chart-bar-row{display:flex;align-items:center;gap:10px}
+.chart-bar-label{font-size:11px;color:var(--text2);width:80px;flex-shrink:0}
+.chart-bar-track{flex:1;height:16px;background:#F1F5F9;border-radius:8px;overflow:hidden}
+.chart-bar-fill{height:100%;border-radius:8px}
+.chart-bar-val{font-size:11px;font-weight:600;color:var(--text);width:32px;text-align:right}
+.radio-group{display:flex;gap:10px;flex-wrap:wrap}
+.radio-chip{display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid var(--border2);border-radius:var(--radius-sm);cursor:pointer;font-size:12px;font-weight:500;color:var(--text2)}
+.radio-chip.sel{border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
+.file-upload{border:2px dashed var(--border2);border-radius:var(--radius);padding:24px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:#FAFCFF}
+.section-pad{padding:16px 20px}
+
+/* Donut chart */
+.donut-wrap{display:flex;align-items:center;gap:16px}
+.donut-svg{flex-shrink:0}
+.donut-legend{flex:1;display:flex;flex-direction:column;gap:8px}
+.legend-row{display:flex;align-items:center;gap:8px}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+</style>
+
+<!-- Phone -->
+<div class="phone-wrap">
+<div class="phone-frame">
+  <div class="phone-screen">
+    <div class="notch"></div>
+    <div class="status-bar">
+      <span>9:41</span>
+      <span>
+        <i class="ti ti-wifi" style="font-size:12px"></i>
+        <i class="ti ti-signal-4g" style="font-size:12px;margin:0 3px"></i>
+        <i class="ti ti-battery-2" style="font-size:12px"></i>
+      </span>
+    </div>
+
+    <!-- ── SCREEN 1: SPLASH ── -->
+    <div class="screen active" id="s-splash">
+      <div class="splash">
+        <div class="splash-logo">🎓</div>
+        <div class="splash-divider"></div>
+        <div class="col gap-4" style="align-items:center">
+          <div style="font-size:12px;opacity:.7;font-weight:600;letter-spacing:2px;text-transform:uppercase">Wisdom Educational Unit</div>
+          <div class="splash-title">Smart Online Class<br>Management System</div>
+          <div class="splash-sub">Empowering Future Learners</div>
+        </div>
+        <div class="loader-dots">
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:16px;width:200px;border-radius:24px" onclick="go('s-login')">Get Started</button>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 2: LOGIN ── -->
+    <div class="screen" id="s-login">
+      <div style="background:linear-gradient(160deg,var(--primary) 0%,#1e3a8a 100%);padding:40px 20px 32px;text-align:center;color:#fff">
+        <div style="font-size:28px;margin-bottom:8px">👋</div>
+        <div style="font-size:18px;font-weight:700">Welcome Back!</div>
+        <div style="font-size:12px;opacity:.8;margin-top:4px">Sign in to continue learning</div>
+      </div>
+      <div style="padding:24px 20px">
+        <div class="field-group">
+          <label class="field-label">Email Address</label>
+          <div class="field-input-icon">
+            <i class="ti ti-mail fi-icon"></i>
+            <input class="field-input" type="email" placeholder="student@wisdom.edu">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Password</label>
+          <div class="field-input-icon">
+            <i class="ti ti-lock fi-icon"></i>
+            <input class="field-input" type="password" placeholder="••••••••">
+          </div>
+        </div>
+        <div style="text-align:right;margin-bottom:20px">
+          <span class="text-sm text-primary semi" style="cursor:pointer">Forgot Password?</span>
+        </div>
+        <button class="btn btn-primary" onclick="go('s-student-dash')">Login as Student</button>
+        <button class="btn btn-outline" style="margin-top:10px" onclick="go('s-teacher-dash')">Login as Teacher</button>
+        <button class="btn btn-sm btn-sm-outline" style="margin-top:10px;width:100%;height:40px" onclick="go('s-admin-dash')">Admin Login</button>
+        <div style="text-align:center;margin-top:20px">
+          <span class="text-sm text-secondary">Don't have an account? </span>
+          <span class="text-sm text-primary semi" style="cursor:pointer" onclick="go('s-register')">Register Now</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 3: REGISTER ── -->
+    <div class="screen" id="s-register">
+      <div class="app-bar">
+        <div class="back-btn" onclick="go('s-login')"><i class="ti ti-arrow-left" style="font-size:16px;color:var(--primary)"></i></div>
+        <span class="app-bar-title">Create Account</span>
+      </div>
+      <div class="screen-inner" style="padding:20px">
+        <div class="field-group">
+          <label class="field-label">Full Name</label>
+          <div class="field-input-icon">
+            <i class="ti ti-user fi-icon"></i>
+            <input class="field-input" placeholder="John Doe">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Email Address</label>
+          <div class="field-input-icon">
+            <i class="ti ti-mail fi-icon"></i>
+            <input class="field-input" type="email" placeholder="john@wisdom.edu">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Phone Number</label>
+          <div class="field-input-icon">
+            <i class="ti ti-phone fi-icon"></i>
+            <input class="field-input" placeholder="+94 71 234 5678">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Password</label>
+          <div class="field-input-icon">
+            <i class="ti ti-lock fi-icon"></i>
+            <input class="field-input" type="password" placeholder="••••••••">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Confirm Password</label>
+          <div class="field-input-icon">
+            <i class="ti ti-lock fi-icon"></i>
+            <input class="field-input" type="password" placeholder="••••••••">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Select Role</label>
+          <div class="radio-group">
+            <div class="radio-chip sel" onclick="selectRole(this)"><i class="ti ti-school" style="font-size:14px"></i> Student</div>
+            <div class="radio-chip" onclick="selectRole(this)"><i class="ti ti-chalkboard" style="font-size:14px"></i> Teacher</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:8px" onclick="go('s-student-dash')">Create Account</button>
+        <div style="text-align:center;margin-top:16px">
+          <span class="text-sm text-secondary">Already have an account? </span>
+          <span class="text-sm text-primary semi" style="cursor:pointer" onclick="go('s-login')">Login</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 4: STUDENT DASHBOARD ── -->
+    <div class="screen" id="s-student-dash">
+      <div class="profile-header">
+        <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:11px;opacity:.7">Wisdom Educational Unit</div>
+          <div style="position:relative;cursor:pointer" onclick="go('s-notif')">
+            <i class="ti ti-bell" style="font-size:22px;color:#fff"></i>
+            <div style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;background:var(--secondary);border-radius:50%;border:2px solid var(--primary)"></div>
+          </div>
+        </div>
+        <div class="row gap-12">
+          <div class="avatar">AS</div>
+          <div>
+            <div style="font-size:13px;opacity:.8">Good Morning 🌅</div>
+            <div style="font-size:17px;font-weight:700">Asel Sewwandi</div>
+            <div style="font-size:11px;opacity:.7;margin-top:2px">BSc IT · Semester 3</div>
+          </div>
+        </div>
+        <div class="stats-grid" style="margin-top:16px">
+          <div style="background:rgba(255,255,255,.15);border-radius:10px;padding:12px;border:1px solid rgba(255,255,255,.2)">
+            <div style="font-size:22px;font-weight:700;color:#fff">87%</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.8)">Attendance</div>
+          </div>
+          <div style="background:rgba(255,255,255,.15);border-radius:10px;padding:12px;border:1px solid rgba(255,255,255,.2)">
+            <div style="font-size:22px;font-weight:700;color:#fff">5</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.8)">Pending Tasks</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-inner">
+        <!-- Quick Actions -->
+        <div class="section-pad">
+          <div class="sec-head"><span class="sec-title">Quick Actions</span></div>
+          <div class="quick-actions">
+            <div class="qa-item" onclick="go('s-my-classes')">
+              <div class="qa-icon" style="background:#EFF6FF"><i class="ti ti-books" style="color:var(--primary)"></i></div>
+              <span class="qa-label">My Classes</span>
+            </div>
+            <div class="qa-item" onclick="go('s-assignments')">
+              <div class="qa-icon" style="background:#FEF3C7"><i class="ti ti-clipboard-list" style="color:#92400e"></i></div>
+              <span class="qa-label">Assignments</span>
+            </div>
+            <div class="qa-item" onclick="go('s-attendance')">
+              <div class="qa-icon" style="background:#D1FAE5"><i class="ti ti-calendar-check" style="color:#065f46"></i></div>
+              <span class="qa-label">Attendance</span>
+            </div>
+            <div class="qa-item" onclick="go('s-materials')">
+              <div class="qa-icon" style="background:#FCE7F3"><i class="ti ti-file-text" style="color:#9D174D"></i></div>
+              <span class="qa-label">Materials</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upcoming Classes -->
+        <div class="section-pad" style="padding-top:0">
+          <div class="sec-head">
+            <span class="sec-title">Upcoming Classes</span>
+            <span class="sec-link" onclick="go('s-my-classes')">See All</span>
+          </div>
+          <div class="col gap-8">
+            <div class="class-card" onclick="go('s-class-detail')">
+              <div class="class-banner" style="background:linear-gradient(135deg,#1E40AF,#3B82F6)">
+                <div style="width:42px;height:42px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">💻</div>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#fff">Data Structures</div>
+                  <div style="font-size:11px;color:rgba(255,255,255,.8)">Ms. R. Perera · CS301</div>
+                </div>
+                <div style="margin-left:auto"><span class="badge" style="background:rgba(255,255,255,.2);color:#fff;font-size:9px">LIVE</span></div>
+              </div>
+              <div class="class-body">
+                <div class="row-between">
+                  <div class="row gap-8">
+                    <span class="badge badge-primary"><i class="ti ti-clock" style="font-size:10px"></i> 10:00 AM</span>
+                    <span class="badge badge-gray">60 min</span>
+                  </div>
+                  <button class="btn-sm btn-sm-primary" onclick="event.stopPropagation()">Join</button>
+                </div>
+              </div>
+            </div>
+            <div class="class-card" onclick="go('s-class-detail')">
+              <div class="class-banner" style="background:linear-gradient(135deg,#065f46,#10B981)">
+                <div style="width:42px;height:42px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">📊</div>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#fff">Database Management</div>
+                  <div style="font-size:11px;color:rgba(255,255,255,.8)">Mr. K. Silva · CS302</div>
+                </div>
+              </div>
+              <div class="class-body">
+                <div class="row-between">
+                  <div class="row gap-8">
+                    <span class="badge badge-gray"><i class="ti ti-clock" style="font-size:10px"></i> 2:00 PM</span>
+                    <span class="badge badge-gray">90 min</span>
+                  </div>
+                  <button class="btn-sm btn-sm-outline" onclick="event.stopPropagation()">Upcoming</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notifications preview -->
+        <div class="section-pad" style="padding-top:0">
+          <div class="sec-head">
+            <span class="sec-title">Notifications</span>
+            <span class="sec-link" onclick="go('s-notif')">See All</span>
+          </div>
+          <div class="col gap-8">
+            <div class="notif-card">
+              <div class="notif-dot"></div>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--text)">Assignment Due Tomorrow</div>
+                <div style="font-size:11px;color:var(--text2);margin-top:2px">CS301 Assignment 3 is due tomorrow at 11:59 PM</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:4px">2h ago</div>
+              </div>
+            </div>
+            <div class="notif-card">
+              <div class="notif-dot" style="background:var(--success)"></div>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--text)">Notes Uploaded</div>
+                <div style="font-size:11px;color:var(--text2);margin-top:2px">New study material for Database Management</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:4px">5h ago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="nav-item active" onclick="go('s-student-dash')">
+          <i class="ti ti-home nav-icon"></i>
+          <span class="nav-label">Home</span>
+          <div class="nav-dot"></div>
+        </div>
+        <div class="nav-item" onclick="go('s-my-classes')">
+          <i class="ti ti-books nav-icon"></i>
+          <span class="nav-label">Classes</span>
+        </div>
+        <div class="nav-item" onclick="go('s-assignments')">
+          <i class="ti ti-clipboard-list nav-icon"></i>
+          <span class="nav-label">Tasks</span>
+        </div>
+        <div class="nav-item" onclick="go('s-attendance')">
+          <i class="ti ti-chart-bar nav-icon"></i>
+          <span class="nav-label">Attendance</span>
+        </div>
+        <div class="nav-item" onclick="go('s-profile')">
+          <i class="ti ti-user nav-icon"></i>
+          <span class="nav-label">Profile</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 5: MY CLASSES ── -->
+    <div class="screen" id="s-my-classes">
+      <div class="app-bar-primary">
+        <div class="back-btn" onclick="go('s-student-dash')"><i class="ti ti-arrow-left" style="font-size:16px;color:#fff"></i></div>
+        <span class="app-bar-title">My Classes</span>
+      </div>
+      <div class="screen-inner" style="padding:16px 20px">
+        <div class="search-bar" style="margin-bottom:16px">
+          <i class="ti ti-search"></i>
+          <input placeholder="Search classes...">
+          <i class="ti ti-adjustments-horizontal" style="font-size:18px;color:var(--text2)"></i>
+        </div>
+        <div class="row gap-8" style="margin-bottom:16px">
+          <div class="chip selected">All</div>
+          <div class="chip">Ongoing</div>
+          <div class="chip">Completed</div>
+        </div>
+        <div class="col gap-10">
+          <div class="class-card" onclick="go('s-class-detail')">
+            <div class="class-banner" style="background:linear-gradient(135deg,#1E40AF,#3B82F6)">
+              <div style="width:42px;height:42px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">💻</div>
+              <div class="flex-1">
+                <div style="font-size:13px;font-weight:700;color:#fff">Data Structures & Algorithms</div>
+                <div style="font-size:10px;color:rgba(255,255,255,.8)">Ms. R. Perera · CS301</div>
+              </div>
+              <span class="badge" style="background:rgba(255,255,255,.25);color:#fff">Live</span>
+            </div>
+            <div class="class-body">
+              <div class="row-between">
+                <div class="col gap-4">
+                  <div class="row gap-8"><span class="badge badge-primary">Mon, Wed, Fri</span></div>
+                  <div style="font-size:11px;color:var(--text2);margin-top:4px">24 Students · 87% Attendance</div>
+                </div>
+                <button class="btn-sm btn-sm-primary">Join Now</button>
+              </div>
+            </div>
+          </div>
+          <div class="class-card" onclick="go('s-class-detail')">
+            <div class="class-banner" style="background:linear-gradient(135deg,#065f46,#10B981)">
+              <div style="width:42px;height:42px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">📊</div>
+              <div class="flex-1">
+                <div style="font-size:13px;font-weight:700;color:#fff">Database Management</div>
+                <div style="font-size:10px;color:rgba(255,255,255,.8)">Mr. K. Silva · CS302</div>
+              </div>
+            </div>
+            <div class="class-body">
+              <div class="row-between">
+                <div class="col gap-4">
+                  <div class="row gap-8"><span class="badge badge-warn">Tue, Thu</span></div>
+                  <div style="font-size:11px;color:var(--text2);margin-top:4px">18 Students · 91% Attendance</div>
+                </div>
+                <button class="btn-sm btn-sm-outline">Upcoming</button>
+              </div>
+            </div>
+          </div>
+          <div class="class-card" onclick="go('s-class-detail')">
+            <div class="class-banner" style="background:linear-gradient(135deg,#7C3AED,#A78BFA)">
+              <div style="width:42px;height:42px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">🔢</div>
+              <div class="flex-1">
+                <div style="font-size:13px;font-weight:700;color:#fff">Discrete Mathematics</div>
+                <div style="font-size:10px;color:rgba(255,255,255,.8)">Dr. A. Fernando · CS303</div>
+              </div>
+            </div>
+            <div class="class-body">
+              <div class="row-between">
+                <div class="col gap-4">
+                  <div class="row gap-8"><span class="badge badge-gray">Wed, Fri</span></div>
+                  <div style="font-size:11px;color:var(--text2);margin-top:4px">20 Students · 79% Attendance</div>
+                </div>
+                <button class="btn-sm btn-sm-outline">Upcoming</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item" onclick="go('s-student-dash')"><i class="ti ti-home nav-icon"></i><span class="nav-label">Home</span></div>
+        <div class="nav-item active" onclick="go('s-my-classes')"><i class="ti ti-books nav-icon"></i><span class="nav-label">Classes</span><div class="nav-dot"></div></div>
+        <div class="nav-item" onclick="go('s-assignments')"><i class="ti ti-clipboard-list nav-icon"></i><span class="nav-label">Tasks</span></div>
+        <div class="nav-item" onclick="go('s-attendance')"><i class="ti ti-chart-bar nav-icon"></i><span class="nav-label">Attendance</span></div>
+        <div class="nav-item" onclick="go('s-profile')"><i class="ti ti-user nav-icon"></i><span class="nav-label">Profile</span></div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 6: CLASS DETAIL ── -->
+    <div class="screen" id="s-class-detail">
+      <div class="app-bar-primary">
+        <div class="back-btn" onclick="go('s-my-classes')"><i class="ti ti-arrow-left" style="font-size:16px;color:#fff"></i></div>
+        <span class="app-bar-title">Class Details</span>
+        <div class="app-bar-icon" style="background:rgba(255,255,255,.2);border:none"><i class="ti ti-dots-vertical" style="font-size:16px;color:#fff"></i></div>
+      </div>
+      <div style="background:linear-gradient(135deg,#1E40AF,#3B82F6);padding:20px;text-align:center">
+        <div style="font-size:40px">💻</div>
+        <div style="font-size:17px;font-weight:700;color:#fff;margin-top:8px">Data Structures & Algorithms</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:4px">CS301 · Semester 3</div>
+        <div style="margin-top:12px"><span class="badge" style="background:rgba(255,255,255,.2);color:#fff">Currently Live</span></div>
+      </div>
+      <div class="screen-inner">
+        <!-- Teacher info -->
+        <div style="padding:16px 20px">
+          <div class="card">
+            <div class="row gap-12">
+              <div style="width:44px;height:44px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--primary)">RP</div>
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Ms. Roshini Perera</div>
+                <div style="font-size:11px;color:var(--text2)">Faculty of Computing</div>
+              </div>
+              <div style="margin-left:auto"><button class="btn-sm btn-sm-outline"><i class="ti ti-message" style="font-size:13px"></i></button></div>
+            </div>
+          </div>
+        </div>
+        <!-- Meeting Link -->
+        <div style="padding:0 20px;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Meeting Link</div>
+          <div class="card" style="background:var(--primary-light);border-color:var(--primary)">
+            <div class="row-between">
+              <div>
+                <div style="font-size:12px;color:var(--primary);font-weight:600">Zoom Meeting</div>
+                <div style="font-size:11px;color:var(--text2)">meet.zoom.us/wisdom-cs301</div>
+              </div>
+              <button class="btn-sm btn-sm-primary">Join</button>
+            </div>
+          </div>
+        </div>
+        <!-- Tabs -->
+        <div style="padding:0 20px;margin-bottom:12px">
+          <div style="display:flex;border-bottom:2px solid var(--border);gap:0">
+            <div style="padding:8px 16px;font-size:12px;font-weight:600;color:var(--primary);border-bottom:2px solid var(--primary);margin-bottom:-2px;cursor:pointer">Notes</div>
+            <div style="padding:8px 16px;font-size:12px;color:var(--text2);cursor:pointer" onclick="go('s-assignments')">Assignments</div>
+            <div style="padding:8px 16px;font-size:12px;color:var(--text2);cursor:pointer" onclick="go('s-attendance')">Attendance</div>
+          </div>
+        </div>
+        <div style="padding:0 20px">
+          <div class="col gap-8">
+            <div class="card-sm row gap-10" style="align-items:center">
+              <div style="width:36px;height:36px;background:#FEE2E2;border-radius:8px;display:flex;align-items:center;justify-content:center"><i class="ti ti-file-type-pdf" style="color:#DC2626;font-size:18px"></i></div>
+              <div class="flex-1">
+                <div style="font-size:12px;font-weight:600;color:var(--text)">Week 5 - Trees & Graphs</div>
+                <div style="font-size:10px;color:var(--text2)">2.4 MB · PDF · Uploaded 2 days ago</div>
+              </div>
+              <i class="ti ti-download" style="font-size:18px;color:var(--primary);cursor:pointer"></i>
+            </div>
+            <div class="card-sm row gap-10" style="align-items:center">
+              <div style="width:36px;height:36px;background:#FEE2E2;border-radius:8px;display:flex;align-items:center;justify-content:center"><i class="ti ti-file-type-pdf" style="color:#DC2626;font-size:18px"></i></div>
+              <div class="flex-1">
+                <div style="font-size:12px;font-weight:600;color:var(--text)">Week 4 - Sorting Algorithms</div>
+                <div style="font-size:10px;color:var(--text2)">1.8 MB · PDF · Uploaded 1 week ago</div>
+              </div>
+              <i class="ti ti-download" style="font-size:18px;color:var(--primary);cursor:pointer"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 7: ASSIGNMENTS ── -->
+    <div class="screen" id="s-assignments">
+      <div class="app-bar-primary">
+        <div class="back-btn" onclick="go('s-student-dash')"><i class="ti ti-arrow-left" style="font-size:16px;color:#fff"></i></div>
+        <span class="app-bar-title">Assignments</span>
+        <div class="app-bar-icon" style="background:rgba(255,255,255,.2);border:none"><i class="ti ti-filter" style="font-size:16px;color:#fff"></i></div>
+      </div>
+      <div class="screen-inner" style="padding:16px 20px">
+        <div class="row gap-8" style="margin-bottom:14px">
+          <div class="chip selected">All</div>
+          <div class="chip">Pending</div>
+          <div class="chip">Submitted</div>
+          <div class="chip">Graded</div>
+        </div>
+        <div class="col gap-10">
+          <div class="card">
+            <div class="row-between" style="margin-bottom:10px">
+              <div class="row gap-8"><div class="color-dot" style="background:#EF4444"></div><span class="text-sm text-secondary">CS301</span></div>
+              <span class="badge badge-danger">Due Tomorrow</span>
+            </div>
+            <div style="font-size:14px;font-weight:600;color:var(--text)">Assignment 3: Binary Trees</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:4px">Implement BST with insert, search & delete operations</div>
+            <div class="divider"></div>
+            <div class="row-between">
+              <div class="row gap-4 text-muted text-xs"><i class="ti ti-calendar" style="font-size:13px"></i> Due: May 24, 2026</div>
+              <button class="btn-sm btn-sm-primary"><i class="ti ti-upload" style="font-size:12px"></i> Submit</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row-between" style="margin-bottom:10px">
+              <div class="row gap-8"><div class="color-dot" style="background:#10B981"></div><span class="text-sm text-secondary">CS302</span></div>
+              <span class="badge badge-warn">Pending</span>
+            </div>
+            <div style="font-size:14px;font-weight:600;color:var(--text)">ER Diagram Design</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:4px">Design an ER diagram for a Hospital Management System</div>
+            <div class="divider"></div>
+            <div class="row-between">
+              <div class="row gap-4 text-muted text-xs"><i class="ti ti-calendar" style="font-size:13px"></i> Due: May 29, 2026</div>
+              <button class="btn-sm btn-sm-primary"><i class="ti ti-upload" style="font-size:12px"></i> Submit</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row-between" style="margin-bottom:10px">
+              <div class="row gap-8"><div class="color-dot" style="background:#7C3AED"></div><span class="text-sm text-secondary">CS303</span></div>
+              <span class="badge badge-success">Submitted</span>
+            </div>
+            <div style="font-size:14px;font-weight:600;color:var(--text)">Logic Gates & Truth Tables</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:4px">Complete truth tables for all fundamental logic gates</div>
+            <div class="divider"></div>
+            <div class="row-between">
+              <div class="row gap-4 text-muted text-xs"><i class="ti ti-check" style="font-size:13px;color:var(--success)"></i> Submitted May 18</div>
+              <span class="badge badge-success">Grade: A</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item" onclick="go('s-student-dash')"><i class="ti ti-home nav-icon"></i><span class="nav-label">Home</span></div>
+        <div class="nav-item" onclick="go('s-my-classes')"><i class="ti ti-books nav-icon"></i><span class="nav-label">Classes</span></div>
+        <div class="nav-item active" onclick="go('s-assignments')"><i class="ti ti-clipboard-list nav-icon"></i><span class="nav-label">Tasks</span><div class="nav-dot"></div></div>
+        <div class="nav-item" onclick="go('s-attendance')"><i class="ti ti-chart-bar nav-icon"></i><span class="nav-label">Attendance</span></div>
+        <div class="nav-item" onclick="go('s-profile')"><i class="ti ti-user nav-icon"></i><span class="nav-label">Profile</span></div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 8: STUDY MATERIALS ── -->
+    <div class="screen" id="s-materials">
+      <div class="app-bar-primary">
+        <div class="back-btn" onclick="go('s-student-dash')"><i class="ti ti-arrow-left" style="font-size:16px;color:#fff"></i></div>
+        <span class="app-bar-title">Study Materials</span>
+      </div>
+      <div class="screen-inner" style="padding:16px 20px">
+        <div class="search-bar" style="margin-bottom:16px">
+          <i class="ti ti-search"></i><input placeholder="Search notes...">
+        </div>
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">CS301 - Data Structures</div>
+        <div class="col gap-8" style="margin-bottom:16px">
+          <div class="card-sm row gap-10" style="align-items:center">
+            <div style="width:40px;height:40px;background:#FEE2E2;border-radius:10px;display:flex;align-items:center;justify-content:center"><i class="ti ti-file-type-pdf" style="color:#DC2626;font-size:20px"></i></div>
+            <div class="flex-1">
+              <div style="font-size:12px;font-weight:600;color:var(--text)">Week 5 - Trees & Graphs</div>
+              <div style="font-size:10px;color:var(--text2)">2.4 MB · May 21, 2026</div>
+            </div>
+            <button class="btn-sm btn-sm-primary"><i class="ti ti-download" style="font-size:12px"></i></button>
+          </div>
+          <div class="card-sm row gap-10" style="align-items:center">
+            <div style="width:40px;height:40px;background:#FEE2E2;border-radius:10px;display:flex;align-items:center;justify-content:center"><i class="ti ti-file-type-pdf" style="color:#DC2626;font-size:20px"></i></div>
+            <div class="flex-1">
+              <div style="font-size:12px;font-weight:600;color:var(--text)">Week 4 - Sorting Algorithms</div>
+              <div style="font-size:10px;color:var(--text2)">1.8 MB · May 14, 2026</div>
+            </div>
+            <button class="btn-sm btn-sm-primary"><i class="ti ti-download" style="font-size:12px"></i></button>
+          </div>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">CS302 - Database Management</div>
+        <div class="col gap-8">
+          <div class="card-sm row gap-10" style="align-items:center">
+            <div style="width:40px;height:40px;background:#FEE2E2;border-radius:10px;display:flex;align-items:center;justify-content:center"><i class="ti ti-file-type-pdf" style="color:#DC2626;font-size:20px"></i></div>
+            <div class="flex-1">
+              <div style="font-size:12px;font-weight:600;color:var(--text)">SQL Joins & Subqueries</div>
+              <div style="font-size:10px;color:var(--text2)">3.1 MB · May 20, 2026</div>
+            </div>
+            <button class="btn-sm btn-sm-primary"><i class="ti ti-download" style="font-size:12px"></i></button>
+          </div>
+          <div class="card-sm row gap-10" style="align-items:center">
+            <div style="width:40px;height:40px;background:#FEE2E2;border-radius:10px;display:flex;align-items:center;justify-content:center"><i class="ti ti-file-type-pdf" style="color:#DC2626;font-size:20px"></i></div>
+            <div class="flex-1">
+              <div style="font-size:12px;font-weight:600;color:var(--text)">Normalization 1NF-3NF</div>
+              <div style="font-size:10px;color:var(--text2)">1.2 MB · May 13, 2026</div>
+            </div>
+            <button class="btn-sm btn-sm-primary"><i class="ti ti-download" style="font-size:12px"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 9: ATTENDANCE ── -->
+    <div class="screen" id="s-attendance">
+      <div class="app-bar-primary">
+        <div class="back-btn" onclick="go('s-student-dash')"><i class="ti ti-arrow-left" style="font-size:16px;color:#fff"></i></div>
+        <span class="app-bar-title">Attendance</span>
+      </div>
+      <div class="screen-inner" style="padding:16px 20px">
+        <!-- Overall -->
+        <div class="card" style="margin-bottom:14px;text-align:center">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Overall Attendance</div>
+          <div style="position:relative;width:100px;height:100px;margin:0 auto 12px">
+            <svg viewBox="0 0 100 100" width="100" height="100">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="#E2E8F0" stroke-width="12"/>
+              <circle cx="50" cy="50" r="40" fill="none" stroke="#1E40AF" stroke-width="12" stroke-dasharray="220 251" stroke-dashoffset="63" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column">
+              <div style="font-size:20px;font-weight:700;color:var(--primary)">87%</div>
+            </div>
+          </div>
+          <div class="row" style="justify-content:center;gap:20px">
+            <div class="col" style="align-items:center"><div style="font-size:16px;font-weight:700;color:var(--success)">43</div><div style="font-size:10px;color:var(--text2)">Present</div></div>
+            <div style="width:1px;height:32px;background:var(--border)"></div>
+            <div class="col" style="align-items:center"><div style="font-size:16px;font-weight:700;color:var(--danger)">6</div><div style="font-size:10px;color:var(--text2)">Absent</div></div>
+            <div style="width:1px;height:32px;background:var(--border)"></div>
+            <div class="col" style="align-items:center"><div style="font-size:16px;font-weight:700;color:var(--text)">49</div><div style="font-size:10px;color:var(--text2)">Total</div></div>
+          </div>
+        </div>
+        <!-- Subject wise -->
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">Subject-wise Attendance</div>
+        <div class="chart-bar-container">
+          <div class="chart-bar-row">
+            <div class="chart-bar-label text-xs text-secondary">CS301</div>
+            <div class="chart-bar-track"><div class="chart-bar-fill" style="width:87%;background:var(--primary)"></div></div>
+            <div class="chart-bar-val">87%</div>
+          </div>
+          <div class="chart-bar-row">
+            <div class="chart-bar-label text-xs text-secondary">CS302</div>
+            <div class="chart-bar-track"><div class="chart-bar-fill" style="width:91%;background:var(--success)"></div></div>
+            <div class="chart-bar-val">91%</div>
+          </div>
+          <div class="chart-bar-row">
+            <div class="chart-bar-label text-xs text-secondary">CS303</div>
+            <div class="chart-bar-track"><div class="chart-bar-fill" style="width:79%;background:var(--warn)"></div></div>
+            <div class="chart-bar-val">79%</div>
+          </div>
+          <div class="chart-bar-row">
+            <div class="chart-bar-label text-xs text-secondary">CS304</div>
+            <div class="chart-bar-track"><div class="chart-bar-fill" style="width:60%;background:var(--danger)"></div></div>
+            <div class="chart-bar-val text-danger">60%</div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px;background:#FEF3C7;border-color:#F59E0B">
+          <div class="row gap-8">
+            <i class="ti ti-alert-triangle" style="font-size:18px;color:#92400e;flex-shrink:0"></i>
+            <div style="font-size:11px;color:#92400e">CS304 attendance is below 65%. Please attend classes to avoid academic issues.</div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item" onclick="go('s-student-dash')"><i class="ti ti-home nav-icon"></i><span class="nav-label">Home</span></div>
+        <div class="nav-item" onclick="go('s-my-classes')"><i class="ti ti-books nav-icon"></i><span class="nav-label">Classes</span></div>
+        <div class="nav-item" onclick="go('s-assignments')"><i class="ti ti-clipboard-list nav-icon"></i><span class="nav-label">Tasks</span></div>
+        <div class="nav-item active" onclick="go('s-attendance')"><i class="ti ti-chart-bar nav-icon"></i><span class="nav-label">Attendance</span><div class="nav-dot"></div></div>
+        <div class="nav-item" onclick="go('s-profile')"><i class="ti ti-user nav-icon"></i><span class="nav-label">Profile</span></div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 10: NOTIFICATIONS ── -->
+    <div class="screen" id="s-notif">
+      <div class="app-bar">
+        <div class="back-btn" onclick="go('s-student-dash')"><i class="ti ti-arrow-left" style="font-size:16px;color:var(--primary)"></i></div>
+        <span class="app-bar-title">Notifications</span>
+        <span style="font-size:11px;color:var(--primary);font-weight:600;cursor:pointer">Mark All Read</span>
+      </div>
+      <div class="screen-inner" style="padding:16px 20px">
+        <div class="col gap-8">
+          <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Today</div>
+          <div class="notif-card" style="border-left:3px solid var(--primary);border-radius:0 var(--radius-sm) var(--radius-sm) 0">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-clipboard-list" style="font-size:17px;color:var(--primary)"></i></div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text)">Assignment Due Tomorrow</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px">CS301 Assignment 3 - Binary Trees is due tomorrow at 11:59 PM</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:4px">2 hours ago</div>
+            </div>
+          </div>
+          <div class="notif-card" style="border-left:3px solid var(--success);border-radius:0 var(--radius-sm) var(--radius-sm) 0">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--success-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-file-upload" style="font-size:17px;color:var(--success)"></i></div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text)">New Notes Available</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px">Week 5 notes for CS302 have been uploaded</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:4px">5 hours ago</div>
+            </div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--text2);margin-top:8px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Yesterday</div>
+          <div class="notif-card">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--warn-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-calendar" style="font-size:17px;color:#92400e"></i></div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text)">Class Rescheduled</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px">CS303 Wednesday class moved to Thursday 3:00 PM</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:4px">Yesterday · 4:30 PM</div>
+            </div>
+          </div>
+          <div class="notif-card">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--success-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-star" style="font-size:17px;color:var(--success)"></i></div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text)">Assignment Graded</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px">CS303 Logic Gates assignment graded — You got A!</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:4px">Yesterday · 2:15 PM</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 11: PROFILE ── -->
+    <div class="screen" id="s-profile">
+      <div class="profile-header" style="padding-bottom:30px">
+        <div style="font-size:11px;opacity:.7;margin-bottom:16px">My Profile</div>
+        <div class="col" style="align-items:center;gap:10px">
+          <div class="avatar-lg">AS</div>
+          <div style="text-align:center">
+            <div style="font-size:17px;font-weight:700;color:#fff">Asel Sewwandi</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.8)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="29485a4c45695e405a4d4644074c4d5c">[email&#160;protected]</a></div>
+            <div style="margin-top:6px"><span class="badge" style="background:rgba(255,255,255,.2);color:#fff;font-size:10px">Student · BSc IT</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--white);border-radius:20px 20px 0 0;margin-top:-16px;padding:20px;position:relative">
+        <div class="col gap-0">
+          <div class="list-item">
+            <div class="list-icon" style="background:var(--primary-light)"><i class="ti ti-user" style="color:var(--primary);font-size:18px"></i></div>
+            <div class="flex-1"><div style="font-size:13px;font-weight:600;color:var(--text)">Personal Information</div><div style="font-size:11px;color:var(--text2)">Name, email, phone</div></div>
+            <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text3)"></i>
+          </div>
+          <div class="list-item">
+            <div class="list-icon" style="background:var(--secondary-light)"><i class="ti ti-school" style="color:#92400e;font-size:18px"></i></div>
+            <div class="flex-1"><div style="font-size:13px;font-weight:600;color:var(--text)">Academic Details</div><div style="font-size:11px;color:var(--text2)">Registration, semester, GPA</div></div>
+            <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text3)"></i>
+          </div>
+          <div class="list-item">
+            <div class="list-icon" style="background:var(--success-bg)"><i class="ti ti-shield-check" style="color:var(--success);font-size:18px"></i></div>
+            <div class="flex-1"><div style="font-size:13px;font-weight:600;color:var(--text)">Privacy & Security</div><div style="font-size:11px;color:var(--text2)">Password, 2FA</div></div>
+            <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text3)"></i>
+          </div>
+          <div class="list-item">
+            <div class="list-icon" style="background:#F3E8FF"><i class="ti ti-bell" style="color:#7C3AED;font-size:18px"></i></div>
+            <div class="flex-1"><div style="font-size:13px;font-weight:600;color:var(--text)">Notifications</div><div style="font-size:11px;color:var(--text2)">Preferences</div></div>
+            <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text3)"></i>
+          </div>
+          <div class="list-item">
+            <div class="list-icon" style="background:var(--danger-bg)"><i class="ti ti-logout" style="color:var(--danger);font-size:18px"></i></div>
+            <div class="flex-1"><div style="font-size:13px;font-weight:600;color:var(--danger)">Logout</div></div>
+            <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text3)"></i>
+          </div>
+        </div>
+        <div style="margin-top:20px">
+          <button class="btn btn-outline" onclick="go('s-login')">Switch Account</button>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item" onclick="go('s-student-dash')"><i class="ti ti-home nav-icon"></i><span class="nav-label">Home</span></div>
+        <div class="nav-item" onclick="go('s-my-classes')"><i class="ti ti-books nav-icon"></i><span class="nav-label">Classes</span></div>
+        <div class="nav-item" onclick="go('s-assignments')"><i class="ti ti-clipboard-list nav-icon"></i><span class="nav-label">Tasks</span></div>
+        <div class="nav-item" onclick="go('s-attendance')"><i class="ti ti-chart-bar nav-icon"></i><span class="nav-label">Attendance</span></div>
+        <div class="nav-item active" onclick="go('s-profile')"><i class="ti ti-user nav-icon"></i><span class="nav-label">Profile</span><div class="nav-dot"></div></div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 12: TEACHER DASHBOARD ── -->
+    <div class="screen" id="s-teacher-dash">
+      <div class="profile-header">
+        <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:11px;opacity:.7">Teacher Portal</div>
+          <div style="position:relative;cursor:pointer" onclick="go('s-notif')">
+            <i class="ti ti-bell" style="font-size:22px;color:#fff"></i>
+            <div style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;background:var(--secondary);border-radius:50%;border:2px solid var(--primary)"></div>
+          </div>
+        </div>
+        <div class="row gap-12">
+          <div class="avatar">KS</div>
+          <div>
+            <div style="font-size:13px;opacity:.8">Good Morning 🌅</div>
+            <div style="font-size:17px;font-weight:700">Mr. K. Silva</div>
+            <div style="font-size:11px;opacity:.7;margin-top:2px">Faculty of Computing</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px">
+          <div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center;border:1px solid rgba(255,255,255,.2)">
+            <div style="font-size:20px;font-weight:700;color:#fff">3</div>
+            <div style="font-size:9px;color:rgba(255,255,255,.8)">Classes</div>
+          </div>
+          <div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center;border:1px solid rgba(255,255,255,.2)">
+            <div style="font-size:20px;font-weight:700;color:#fff">62</div>
+            <div style="font-size:9px;color:rgba(255,255,255,.8)">Students</div>
+          </div>
+          <div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center;border:1px solid rgba(255,255,255,.2)">
+            <div style="font-size:20px;font-weight:700;color:#fff">89%</div>
+            <div style="font-size:9px;color:rgba(255,255,255,.8)">Avg Attend.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-inner">
+        <div class="section-pad">
+          <div class="sec-head"><span class="sec-title">Quick Actions</span></div>
+          <div class="quick-actions">
+            <div class="qa-item" onclick="go('s-create-class')">
+              <div class="qa-icon" style="background:#EFF6FF"><i class="ti ti-plus" style="color:var(--primary)"></i></div>
+              <span class="qa-label">Create Class</span>
+            </div>
+            <div class="qa-item" onclick="go('s-upload-notes')">
+              <div class="qa-icon" style="background:#FEE2E2"><i class="ti ti-file-upload" style="color:#DC2626"></i></div>
+              <span class="qa-label">Upload Notes</span>
+            </div>
+            <div class="qa-item" onclick="go('s-upload-assign')">
+              <div class="qa-icon" style="background:#FEF3C7"><i class="ti ti-clipboard-plus" style="color:#92400e"></i></div>
+              <span class="qa-label">Assignment</span>
+            </div>
+            <div class="qa-item" onclick="go('s-mark-attend')">
+              <div class="qa-icon" style="background:#D1FAE5"><i class="ti ti-check" style="color:#065f46"></i></div>
+              <span class="qa-label">Attendance</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-pad" style="padding-top:0">
+          <div class="sec-head"><span class="sec-title">Attendance Summary</span></div>
+          <div class="col gap-10">
+            <div class="card-sm">
+              <div class="row-between" style="margin-bottom:8px">
+                <div style="font-size:12px;font-weight:600;color:var(--text)">CS301 - Data Structures</div>
+                <span class="badge badge-success">87%</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill progress-primary" style="width:87%"></div></div>
+              <div style="font-size:10px;color:var(--text2);margin-top:6px">24/28 students present today</div>
+            </div>
+            <div class="card-sm">
+              <div class="row-between" style="margin-bottom:8px">
+                <div style="font-size:12px;font-weight:600;color:var(--text)">CS302 - Database Mgmt</div>
+                <span class="badge badge-success">91%</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill progress-success" style="width:91%"></div></div>
+              <div style="font-size:10px;color:var(--text2);margin-top:6px">18/20 students present today</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-pad" style="padding-top:0">
+          <div class="sec-head"><span class="sec-title">Today's Classes</span></div>
+          <div class="col gap-8">
+            <div class="card">
+              <div class="row gap-10">
+                <div style="width:40px;height:40px;background:linear-gradient(135deg,#1E40AF,#3B82F6);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px">💻</div>
+                <div class="flex-1">
+                  <div style="font-size:13px;font-weight:600;color:var(--text)">Data Structures</div>
+                  <div style="font-size:11px;color:var(--text2)">10:00 AM - 11:00 AM</div>
+                </div>
+                <button class="btn-sm btn-sm-primary" onclick="go('s-mark-attend')">Mark</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="nav-item active" onclick="go('s-teacher-dash')"><i class="ti ti-home nav-icon"></i><span class="nav-label">Home</span><div class="nav-dot"></div></div>
+        <div class="nav-item" onclick="go('s-create-class')"><i class="ti ti-plus nav-icon"></i><span class="nav-label">Create</span></div>
+        <div class="nav-item" onclick="go('s-mark-attend')"><i class="ti ti-check nav-icon"></i><span class="nav-label">Attendance</span></div>
+        <div class="nav-item" onclick="go('s-upload-assign')"><i class="ti ti-clipboard-list nav-icon"></i><span class="nav-label">Tasks</span></div>
+        <div class="nav-item" onclick="go('s-profile')"><i class="ti ti-user nav-icon"></i><span class="nav-label">Profile</span></div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 13: CREATE CLASS ── -->
+    <div class="screen" id="s-create-class">
+      <div class="app-bar-primary">
+        <div class="back-btn" onclick="go('s-teacher-dash')"><i class="ti ti-arrow-left" style="font-size:16px;color:#fff"></i></div>
+        <span class="app-bar-title">Create New Class</span>
+      </div>
+      <div class="screen-inner" style="padding:20px">
+        <div class="field-group">
+          <label class="field-label">Class Name</label>
+          <input class="field-input" placeholder="e.g. Data Structures">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Subject / Course Code</label>
+          <input class="field-input" placeholder="e.g. CS301">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Date</label>
+          <div class="field-input-icon">
+            <i class="ti ti-calendar fi-icon"></i>
+            <input class="field-input" type="date" placeholder="Select date">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Time</label>
+          <div class="field-input-icon">
+            <i class="ti ti-clock fi-icon"></i>
+            <input class="field-input" type="time" placeholder="Select time">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Duration</label>
+          <div style="display:flex;gap:8px">
+            <div class="chip selected">60 min</div>
+            <div class="chip">90 min</div>
+            <div class="chip">120 min</div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Meeting Link</label>
+          <div class="field-input-icon">
+            <i class="ti ti-link fi-icon"></i>
+            <input class="field-input" placeholder="https://zoom.us/j/...">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Max Students</label>
+          <input class="field-input" type="number" placeholder="30">
+        </div>
+        <button class="btn btn-primary" style="margin-top:8px" onclick="go('s-teacher-dash')"><i class="ti ti-plus" style="font-size:16px"></i> Create Class</button>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 14: UPLOAD NOTES ── -->
+    <div class="screen" id="s-upload-notes">
+      <div class="app-bar-primary">
+        <div class="back-btn" onclick="go('s-teacher-dash')"><i class="ti ti-arrow-left" style="font-size:16px;color:#fff"></i></div>
+        <span class="app-bar-title">Upload Notes</span>
+      </div>
+      <div class="screen-inner" style="padding:20px">
+        <div class="field-group">
+          <label class="field-label">Note Title</label>
+          <input class="field-input" placeholder="e.g. Week 5 - Trees & Graphs">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Select Class</label>
+          <select class="field-input">
+            <option>CS301 - Data Structures</option>
+            <option>CS302 - Database Mgmt</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Description</label>
+          <textarea class="field-input" rows="3" style="height:80px;padding:10px;resize:none;font-family:Poppins,sans-serif" placeholder="Brief description of the notes content..."></textarea>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Upload PDF</label>
+          <div class="file-upload">
+            <i class="ti ti-cloud-upload" style="font-size:32px;color:var(--primary)"></i>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">Click to Upload PDF</div>
+            <div style="font-size:11px;color:var(--text2)">Max file size: 25 MB</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:8px" onclick="go('s-teacher-dash')"><i class="ti ti-upload" style="font-size:16px"></i> Upload Notes</button>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 15: UPLOAD ASSIGNMENT ── -->
+    <div class="screen" id="s-upload-assign">
+      <div class="app-bar-primary">
+        <div class="back-btn" onclick="go('s-teacher-dash')"><i class="ti ti-arrow-left" style="font-size:16px;color:#fff"></i></div>
+        <span class="app-bar-title">Upload Assignment</span>
+      </div>
+      <div class="screen-inner" style="padding:20px">
+        <div class="field-group">
+          <label class="field-label">Assignment Title</label>
+          <input class="field-input" placeholder="e.g. Assignment 4: Linked Lists">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Select Class</label>
+          <select class="field-input">
+            <option>CS301 - Data Structures</option>
+            <option>CS302 - Database Mgmt</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Description / Instructions</label>
+          <textarea class="field-input" rows="3" style="height:80px;padding:10px;resize:none;font-family:Poppins,sans-serif" placeholder="Describe the assignment requirements..."></textarea>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Deadline</label>
+          <div class="field-input-icon">
+            <i class="ti ti-calendar fi-icon"></i>
+            <input class="field-input" type="datetime-local">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Total Marks</label>
+          <input class="field-input" type="number" placeholder="100">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Attachment (Optional)</label>
+          <div class="file-upload" style="padding:16px">
+            <i class="ti ti-paperclip" style="font-size:24px;color:var(--primary)"></i>
+            <div style="font-size:12px;color:var(--text2)">Upload assignment file (PDF, DOCX)</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:8px" onclick="go('s-teacher-dash')"><i class="ti ti-send" style="font-size:16px"></i> Publish Assignment</button>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 16: MARK ATTENDANCE ── -->
+    <div class="screen" id="s-mark-attend">
+      <div class="app-bar-primary">
+        <div class="back-btn" onclick="go('s-teacher-dash')"><i class="ti ti-arrow-left" style="font-size:16px;color:#fff"></i></div>
+        <span class="app-bar-title">Mark Attendance</span>
+      </div>
+      <div style="background:var(--white);padding:12px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">CS301 - Data Structures</div>
+        <div style="font-size:11px;color:var(--text2)">Saturday, May 23, 2026 · 10:00 AM</div>
+        <div class="row gap-8" style="margin-top:8px">
+          <span class="badge badge-success">Present: 5</span>
+          <span class="badge badge-danger">Absent: 1</span>
+        </div>
+      </div>
+      <div class="screen-inner" style="padding:12px 20px">
+        <div id="students-list">
+          <div class="toggle-row">
+            <div class="row gap-10">
+              <div style="width:34px;height:34px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--primary)">AS</div>
+              <div><div style="font-size:12px;font-weight:600;color:var(--text)">Asel Sewwandi</div><div style="font-size:10px;color:var(--text2)">STU001</div></div>
+            </div>
+            <div class="toggle on" onclick="toggleAttend(this)"><div class="toggle-knob"></div></div>
+          </div>
+          <div class="toggle-row">
+            <div class="row gap-10">
+              <div style="width:34px;height:34px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--primary)">DK</div>
+              <div><div style="font-size:12px;font-weight:600;color:var(--text)">Dinuka Kumara</div><div style="font-size:10px;color:var(--text2)">STU002</div></div>
+            </div>
+            <div class="toggle on" onclick="toggleAttend(this)"><div class="toggle-knob"></div></div>
+          </div>
+          <div class="toggle-row">
+            <div class="row gap-10">
+              <div style="width:34px;height:34px;border-radius:50%;background:var(--danger-bg);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--danger)">FN</div>
+              <div><div style="font-size:12px;font-weight:600;color:var(--text)">Fathima Noor</div><div style="font-size:10px;color:var(--text2)">STU003</div></div>
+            </div>
+            <div class="toggle" onclick="toggleAttend(this)"><div class="toggle-knob"></div></div>
+          </div>
+          <div class="toggle-row">
+            <div class="row gap-10">
+              <div style="width:34px;height:34px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--primary)">GT</div>
+              <div><div style="font-size:12px;font-weight:600;color:var(--text)">Gayan Tharaka</div><div style="font-size:10px;color:var(--text2)">STU004</div></div>
+            </div>
+            <div class="toggle on" onclick="toggleAttend(this)"><div class="toggle-knob"></div></div>
+          </div>
+          <div class="toggle-row">
+            <div class="row gap-10">
+              <div style="width:34px;height:34px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--primary)">IP</div>
+              <div><div style="font-size:12px;font-weight:600;color:var(--text)">Ishara Perera</div><div style="font-size:10px;color:var(--text2)">STU005</div></div>
+            </div>
+            <div class="toggle on" onclick="toggleAttend(this)"><div class="toggle-knob"></div></div>
+          </div>
+          <div class="toggle-row">
+            <div class="row gap-10">
+              <div style="width:34px;height:34px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--primary)">KD</div>
+              <div><div style="font-size:12px;font-weight:600;color:var(--text)">Kasun Dias</div><div style="font-size:10px;color:var(--text2)">STU006</div></div>
+            </div>
+            <div class="toggle on" onclick="toggleAttend(this)"><div class="toggle-knob"></div></div>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="go('s-teacher-dash')"><i class="ti ti-check" style="font-size:16px"></i> Save Attendance</button>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 17: ADMIN DASHBOARD ── -->
+    <div class="screen" id="s-admin-dash">
+      <div class="profile-header">
+        <div style="margin-bottom:14px;font-size:11px;opacity:.7">Admin Dashboard</div>
+        <div class="row gap-12">
+          <div class="avatar" style="background:rgba(245,158,11,.3);border-color:rgba(245,158,11,.6)">AD</div>
+          <div>
+            <div style="font-size:13px;opacity:.8">System Administrator</div>
+            <div style="font-size:17px;font-weight:700">Admin Panel</div>
+            <div style="font-size:11px;opacity:.7;margin-top:2px">Wisdom Educational Unit</div>
+          </div>
+        </div>
+      </div>
+      <div class="screen-inner">
+        <div class="section-pad">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#EFF6FF"><i class="ti ti-users" style="color:var(--primary);font-size:18px"></i></div>
+              <div class="stat-value">248</div>
+              <div class="stat-label">Total Students</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#D1FAE5"><i class="ti ti-chalkboard" style="color:var(--success);font-size:18px"></i></div>
+              <div class="stat-value">18</div>
+              <div class="stat-label">Total Teachers</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#FEF3C7"><i class="ti ti-books" style="color:#92400e;font-size:18px"></i></div>
+              <div class="stat-value">34</div>
+              <div class="stat-label">Active Classes</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#FCE7F3"><i class="ti ti-chart-bar" style="color:#9D174D;font-size:18px"></i></div>
+              <div class="stat-value">86%</div>
+              <div class="stat-label">Avg Attendance</div>
+            </div>
+          </div>
+        </div>
+        <div class="section-pad" style="padding-top:0">
+          <div class="sec-head"><span class="sec-title">Administration</span></div>
+          <div class="col gap-8">
+            <div class="card" style="cursor:pointer" onclick="go('s-manage-students')">
+              <div class="row gap-12">
+                <div class="list-icon" style="background:var(--primary-light);border-radius:10px"><i class="ti ti-users" style="color:var(--primary);font-size:18px"></i></div>
+                <div class="flex-1"><div style="font-size:13px;font-weight:600;color:var(--text)">Manage Students</div><div style="font-size:11px;color:var(--text2)">248 registered students</div></div>
+                <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text3)"></i>
+              </div>
+            </div>
+            <div class="card" style="cursor:pointer" onclick="go('s-manage-teachers')">
+              <div class="row gap-12">
+                <div class="list-icon" style="background:var(--success-bg);border-radius:10px"><i class="ti ti-chalkboard" style="color:var(--success);font-size:18px"></i></div>
+                <div class="flex-1"><div style="font-size:13px;font-weight:600;color:var(--text)">Manage Teachers</div><div style="font-size:11px;color:var(--text2)">18 faculty members</div></div>
+                <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text3)"></i>
+              </div>
+            </div>
+            <div class="card" style="cursor:pointer" onclick="go('s-reports')">
+              <div class="row gap-12">
+                <div class="list-icon" style="background:var(--secondary-light);border-radius:10px"><i class="ti ti-file-analytics" style="color:#92400e;font-size:18px"></i></div>
+                <div class="flex-1"><div style="font-size:13px;font-weight:600;color:var(--text)">Reports & Analytics</div><div style="font-size:11px;color:var(--text2)">Attendance, student, assignment reports</div></div>
+                <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text3)"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item active" onclick="go('s-admin-dash')"><i class="ti ti-home nav-icon"></i><span class="nav-label">Dashboard</span><div class="nav-dot"></div></div>
+        <div class="nav-item" onclick="go('s-manage-students')"><i class="ti ti-users nav-icon"></i><span class="nav-label">Students</span></div>
+        <div class="nav-item" onclick="go('s-manage-teachers')"><i class="ti ti-chalkboard nav-icon"></i><span class="nav-label">Teachers</span></div>
+        <div class="nav-item" onclick="go('s-reports')"><i class="ti ti-file-analytics nav-icon"></i><span class="nav-label">Reports</span></div>
+        <div class="nav-item" onclick="go('s-login')"><i class="ti ti-logout nav-icon"></i><span class="nav-label">Logout</span></div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 18: MANAGE STUDENTS ── -->
+    <div class="screen" id="s-manage-students">
+      <div class="app-bar-primary">
+        <div class="back-btn" onclick="go('s-admin-dash')"><i class="ti ti-arrow-left" style="font-size:16px;color:#fff"></i></div>
+        <span class="app-bar-title">Manage Students</span>
+        <div class="app-bar-icon" style="background:rgba(255,255,255,.2);border:none"><i class="ti ti-plus" style="font-size:16px;color:#fff"></i></div>
+      </div>
+      <div style="padding:12px 20px">
+        <div class="search-bar"><i class="ti ti-search"></i><input placeholder="Search students..."></div>
+      </div>
+      <div class="screen-inner" style="padding:0 20px">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Student</th><th>ID</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div style="font-size:12px;font-weight:600;color:var(--text)">Asel Sewwandi</div><div style="font-size:10px;color:var(--text2)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="aecfddcbc2eed9c7ddcac1c380cbcadb">[email&#160;protected]</a></div></td>
+                <td style="font-size:11px;color:var(--text2)">STU001</td>
+                <td><span class="badge badge-success">Active</span></td>
+                <td><div class="row gap-4"><button class="btn-sm btn-sm-outline" style="padding:0 8px;height:28px"><i class="ti ti-edit" style="font-size:12px"></i></button><button class="btn-sm btn-sm-danger" style="padding:0 8px;height:28px"><i class="ti ti-trash" style="font-size:12px"></i></button></div></td>
+              </tr>
+              <tr>
+                <td><div style="font-size:12px;font-weight:600;color:var(--text)">Dinuka Kumara</div><div style="font-size:10px;color:var(--text2)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6b0f02051e000a2b1c02180f0406450e0f1e">[email&#160;protected]</a></div></td>
+                <td style="font-size:11px;color:var(--text2)">STU002</td>
+                <td><span class="badge badge-success">Active</span></td>
+                <td><div class="row gap-4"><button class="btn-sm btn-sm-outline" style="padding:0 8px;height:28px"><i class="ti ti-edit" style="font-size:12px"></i></button><button class="btn-sm btn-sm-danger" style="padding:0 8px;height:28px"><i class="ti ti-trash" style="font-size:12px"></i></button></div></td>
+              </tr>
+              <tr>
+                <td><div style="font-size:12px;font-weight:600;color:var(--text)">Fathima Noor</div><div style="font-size:10px;color:var(--text2)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c3a5a2b7abaaaea283b4aab0a7acaeeda6a7b6">[email&#160;protected]</a></div></td>
+                <td style="font-size:11px;color:var(--text2)">STU003</td>
+                <td><span class="badge badge-warn">Inactive</span></td>
+                <td><div class="row gap-4"><button class="btn-sm btn-sm-outline" style="padding:0 8px;height:28px"><i class="ti ti-edit" style="font-size:12px"></i></button><button class="btn-sm btn-sm-danger" style="padding:0 8px;height:28px"><i class="ti ti-trash" style="font-size:12px"></i></button></div></td>
+              </tr>
+              <tr>
+                <td><div style="font-size:12px;font-weight:600;color:var(--text)">Gayan Tharaka</div><div style="font-size:10px;color:var(--text2)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c1a6a0b8a0af81b6a8b2a5aeacefa4a5b4">[email&#160;protected]</a></div></td>
+                <td style="font-size:11px;color:var(--text2)">STU004</td>
+                <td><span class="badge badge-success">Active</span></td>
+                <td><div class="row gap-4"><button class="btn-sm btn-sm-outline" style="padding:0 8px;height:28px"><i class="ti ti-edit" style="font-size:12px"></i></button><button class="btn-sm btn-sm-danger" style="padding:0 8px;height:28px"><i class="ti ti-trash" style="font-size:12px"></i></button></div></td>
+              </tr>
+              <tr>
+                <td><div style="font-size:12px;font-weight:600;color:var(--text)">Ishara Perera</div><div style="font-size:10px;color:var(--text2)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e68f958e879487a6918f9582898bc8838293">[email&#160;protected]</a></div></td>
+                <td style="font-size:11px;color:var(--text2)">STU005</td>
+                <td><span class="badge badge-success">Active</span></td>
+                <td><div class="row gap-4"><button class="btn-sm btn-sm-outline" style="padding:0 8px;height:28px"><i class="ti ti-edit" style="font-size:12px"></i></button><button class="btn-sm btn-sm-danger" style="padding:0 8px;height:28px"><i class="ti ti-trash" style="font-size:12px"></i></button></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="padding:12px 0;text-align:center">
+          <span style="font-size:11px;color:var(--text2)">Showing 5 of 248 students</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 19: MANAGE TEACHERS ── -->
+    <div class="screen" id="s-manage-teachers">
+      <div class="app-bar-primary">
+        <div class="back-btn" onclick="go('s-admin-dash')"><i class="ti ti-arrow-left" style="font-size:16px;color:#fff"></i></div>
+        <span class="app-bar-title">Manage Teachers</span>
+        <div class="app-bar-icon" style="background:rgba(255,255,255,.2);border:none"><i class="ti ti-plus" style="font-size:16px;color:#fff"></i></div>
+      </div>
+      <div style="padding:12px 20px">
+        <div class="search-bar"><i class="ti ti-search"></i><input placeholder="Search teachers..."></div>
+      </div>
+      <div class="screen-inner" style="padding:0 20px">
+        <div class="col gap-8">
+          <div class="card">
+            <div class="row gap-10" style="margin-bottom:10px">
+              <div style="width:44px;height:44px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--primary)">KS</div>
+              <div class="flex-1">
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Mr. K. Silva</div>
+                <div style="font-size:11px;color:var(--text2)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="dab1a9b3b6acbb9aadb3a9beb5b7f4bfbeaf">[email&#160;protected]</a></div>
+              </div>
+              <span class="badge badge-success">Active</span>
+            </div>
+            <div class="row gap-8" style="margin-bottom:8px">
+              <span class="badge badge-primary">CS301</span>
+              <span class="badge badge-primary">CS302</span>
+            </div>
+            <div class="row gap-8">
+              <button class="btn-sm btn-sm-outline" style="flex:1"><i class="ti ti-edit" style="font-size:12px"></i> Edit</button>
+              <button class="btn-sm btn-sm-danger" style="flex:1"><i class="ti ti-trash" style="font-size:12px"></i> Remove</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row gap-10" style="margin-bottom:10px">
+              <div style="width:44px;height:44px;border-radius:50%;background:var(--success-bg);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--success)">RP</div>
+              <div class="flex-1">
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Ms. R. Perera</div>
+                <div style="font-size:11px;color:var(--text2)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ec9e9c899e899e8dac9b859f888381c2898899">[email&#160;protected]</a></div>
+              </div>
+              <span class="badge badge-success">Active</span>
+            </div>
+            <div class="row gap-8" style="margin-bottom:8px">
+              <span class="badge badge-primary">CS303</span>
+            </div>
+            <div class="row gap-8">
+              <button class="btn-sm btn-sm-outline" style="flex:1"><i class="ti ti-edit" style="font-size:12px"></i> Edit</button>
+              <button class="btn-sm btn-sm-danger" style="flex:1"><i class="ti ti-trash" style="font-size:12px"></i> Remove</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row gap-10" style="margin-bottom:10px">
+              <div style="width:44px;height:44px;border-radius:50%;background:#F3E8FF;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#7C3AED">AF</div>
+              <div class="flex-1">
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Dr. A. Fernando</div>
+                <div style="font-size:11px;color:var(--text2)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="caabacafb8a4aba4aea58abda3b9aea5a7e4afaebf">[email&#160;protected]</a></div>
+              </div>
+              <span class="badge badge-warn">On Leave</span>
+            </div>
+            <div class="row gap-8" style="margin-bottom:8px">
+              <span class="badge badge-primary">CS304</span>
+              <span class="badge badge-primary">CS305</span>
+            </div>
+            <div class="row gap-8">
+              <button class="btn-sm btn-sm-outline" style="flex:1"><i class="ti ti-edit" style="font-size:12px"></i> Edit</button>
+              <button class="btn-sm btn-sm-danger" style="flex:1"><i class="ti ti-trash" style="font-size:12px"></i> Remove</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 20: REPORTS ── -->
+    <div class="screen" id="s-reports">
+      <div class="app-bar-primary">
+        <div class="back-btn" onclick="go('s-admin-dash')"><i class="ti ti-arrow-left" style="font-size:16px;color:#fff"></i></div>
+        <span class="app-bar-title">Reports & Analytics</span>
+      </div>
+      <div class="screen-inner" style="padding:16px 20px">
+        <div class="col gap-10">
+          <div class="card">
+            <div class="row gap-10" style="margin-bottom:14px">
+              <div class="stat-icon" style="background:var(--primary-light)"><i class="ti ti-calendar-check" style="color:var(--primary);font-size:18px"></i></div>
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--text)">Attendance Report</div>
+                <div style="font-size:11px;color:var(--text2)">All classes · May 2026</div>
+              </div>
+            </div>
+            <div class="chart-bar-container" style="margin-bottom:12px">
+              <div class="chart-bar-row">
+                <div class="chart-bar-label text-xs text-secondary">CS301</div>
+                <div class="chart-bar-track"><div class="chart-bar-fill" style="width:87%;background:var(--primary)"></div></div>
+                <div class="chart-bar-val">87%</div>
+              </div>
+              <div class="chart-bar-row">
+                <div class="chart-bar-label text-xs text-secondary">CS302</div>
+                <div class="chart-bar-track"><div class="chart-bar-fill" style="width:91%;background:var(--success)"></div></div>
+                <div class="chart-bar-val">91%</div>
+              </div>
+              <div class="chart-bar-row">
+                <div class="chart-bar-label text-xs text-secondary">CS303</div>
+                <div class="chart-bar-track"><div class="chart-bar-fill" style="width:79%;background:var(--warn)"></div></div>
+                <div class="chart-bar-val">79%</div>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-sm-primary w-full" style="height:38px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:8px"><i class="ti ti-download" style="font-size:14px"></i> Download PDF</button>
+          </div>
+
+          <div class="card">
+            <div class="row gap-10" style="margin-bottom:14px">
+              <div class="stat-icon" style="background:var(--success-bg)"><i class="ti ti-users" style="color:var(--success);font-size:18px"></i></div>
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--text)">Student Report</div>
+                <div style="font-size:11px;color:var(--text2)">Enrollment & performance</div>
+              </div>
+            </div>
+            <div class="stats-grid" style="gap:8px;margin-bottom:12px">
+              <div style="background:#F8FAFC;border-radius:8px;padding:10px;text-align:center">
+                <div style="font-size:18px;font-weight:700;color:var(--text)">248</div>
+                <div style="font-size:10px;color:var(--text2)">Enrolled</div>
+              </div>
+              <div style="background:#F8FAFC;border-radius:8px;padding:10px;text-align:center">
+                <div style="font-size:18px;font-weight:700;color:var(--success)">231</div>
+                <div style="font-size:10px;color:var(--text2)">Active</div>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-sm-primary w-full" style="height:38px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:8px"><i class="ti ti-download" style="font-size:14px"></i> Download PDF</button>
+          </div>
+
+          <div class="card">
+            <div class="row gap-10" style="margin-bottom:14px">
+              <div class="stat-icon" style="background:var(--secondary-light)"><i class="ti ti-clipboard-list" style="color:#92400e;font-size:18px"></i></div>
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--text)">Assignment Report</div>
+                <div style="font-size:11px;color:var(--text2)">Submissions & grades</div>
+              </div>
+            </div>
+            <div class="stats-grid" style="gap:8px;margin-bottom:12px">
+              <div style="background:#F8FAFC;border-radius:8px;padding:10px;text-align:center">
+                <div style="font-size:18px;font-weight:700;color:var(--text)">142</div>
+                <div style="font-size:10px;color:var(--text2)">Submitted</div>
+              </div>
+              <div style="background:#F8FAFC;border-radius:8px;padding:10px;text-align:center">
+                <div style="font-size:18px;font-weight:700;color:var(--danger)">23</div>
+                <div style="font-size:10px;color:var(--text2)">Pending</div>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-sm-primary w-full" style="height:38px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:8px"><i class="ti ti-download" style="font-size:14px"></i> Download PDF</button>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item" onclick="go('s-admin-dash')"><i class="ti ti-home nav-icon"></i><span class="nav-label">Dashboard</span></div>
+        <div class="nav-item" onclick="go('s-manage-students')"><i class="ti ti-users nav-icon"></i><span class="nav-label">Students</span></div>
+        <div class="nav-item" onclick="go('s-manage-teachers')"><i class="ti ti-chalkboard nav-icon"></i><span class="nav-label">Teachers</span></div>
+        <div class="nav-item active" onclick="go('s-reports')"><i class="ti ti-file-analytics nav-icon"></i><span class="nav-label">Reports</span><div class="nav-dot"></div></div>
+        <div class="nav-item" onclick="go('s-login')"><i class="ti ti-logout nav-icon"></i><span class="nav-label">Logout</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- Screen map legend -->
+<div style="margin-top:24px;width:360px;background:#fff;border-radius:16px;padding:16px;border:1px solid #E2E8F0">
+  <div style="font-size:13px;font-weight:700;color:#0F172A;margin-bottom:12px">📱 Screen Navigation Map</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">
+    <div style="background:#EFF6FF;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-splash')">1. Splash Screen</div>
+    <div style="background:#EFF6FF;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-login')">2. Login</div>
+    <div style="background:#EFF6FF;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-register')">3. Register</div>
+    <div style="background:#DBEAFE;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-student-dash')">4. Student Dashboard</div>
+    <div style="background:#DBEAFE;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-my-classes')">5. My Classes</div>
+    <div style="background:#DBEAFE;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-class-detail')">6. Class Detail</div>
+    <div style="background:#DBEAFE;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-assignments')">7. Assignments</div>
+    <div style="background:#DBEAFE;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-materials')">8. Study Materials</div>
+    <div style="background:#DBEAFE;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-attendance')">9. Attendance</div>
+    <div style="background:#DBEAFE;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-notif')">10. Notifications</div>
+    <div style="background:#DBEAFE;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-profile')">11. Profile</div>
+    <div style="background:#D1FAE5;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-teacher-dash')">12. Teacher Dashboard</div>
+    <div style="background:#D1FAE5;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-create-class')">13. Create Class</div>
+    <div style="background:#D1FAE5;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-upload-notes')">14. Upload Notes</div>
+    <div style="background:#D1FAE5;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-upload-assign')">15. Upload Assignment</div>
+    <div style="background:#D1FAE5;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-mark-attend')">16. Mark Attendance</div>
+    <div style="background:#FEF3C7;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-admin-dash')">17. Admin Dashboard</div>
+    <div style="background:#FEF3C7;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-manage-students')">18. Manage Students</div>
+    <div style="background:#FEF3C7;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-manage-teachers')">19. Manage Teachers</div>
+    <div style="background:#FEF3C7;border-radius:8px;padding:8px;cursor:pointer" onclick="go('s-reports')">20. Reports</div>
+  </div>
+  <div style="margin-top:12px;font-size:10px;color:#94A3B8;display:flex;gap:12px;flex-wrap:wrap">
+    <span>🔵 Auth</span><span>🔷 Student</span><span>🟢 Teacher</span><span>🟡 Admin</span>
+  </div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=document.getElementById(id);
+  if(el){el.classList.add('active');el.scrollTop=0;}
+}
+function selectRole(el){
+  document.querySelectorAll('.radio-chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function toggleAttend(el){
+  el.classList.toggle('on');
+}
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"96a8f84b0678428881275803b4b8d36d","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>

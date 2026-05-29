@@ -1,0 +1,1 @@
+ C:\\Users\\Uthum\\OneDrive\\Desktop\\wisdom_class_management\\wisdom_class_management\\.dart_tool\\flutter_build\\e19234604ccde897eb269b35e6cb2243\\native_assets.json: 
