@@ -1,0 +1,19 @@
+flutter_native_splash:
+  color: "#1E40AF"
+  color_dark: "#0F2A6B"
+  
+  # For iOS and older Android versions (Full screen center)
+  image: "assets/images/Wisdom LOGO bg removed.png"
+  image_dark: "assets/images/Wisdom LOGO bg removed.png"
+  
+  fullscreen: true
+
+  # Android 12+ Center Circle Configuration
+  android_12:
+    # This places your logo directly in the center circle
+    image: "assets/images/Wisdom LOGO bg removed.png"
+    image_dark: "assets/images/Wisdom LOGO bg removed.png"
+    
+    # Matches the splash background so the circle mask blends seamlessly
+    icon_background_color: "#1E40AF"
+    icon_background_color_dark: "#0F2A6B"
