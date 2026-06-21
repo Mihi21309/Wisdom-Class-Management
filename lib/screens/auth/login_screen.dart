@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../home_screen.dart';
+import '../../services/student_service.dart';
+import '../../services/admin_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -25,6 +27,8 @@ class _LoginScreenState extends State<LoginScreen>
 
   late TextEditingController _emailController;
   late TextEditingController _passwordController;
+  final StudentService _studentService = StudentService();
+  final AdminService _adminService = AdminService();
 
   @override
   void initState() {
@@ -100,14 +104,27 @@ class _LoginScreenState extends State<LoginScreen>
     });
 
     try {
-      // TODO: Add your database/Firebase authentication call here
-      // Example: await FirebaseAuth.instance.signInWithEmailAndPassword(
-      //   email: _emailController.text,
-      //   password: _passwordController.text,
-      // );
+      final loginInput = _emailController.text.trim();
+      String? emailToUse;
+
+      if (loginInput.contains('@')) {
+        emailToUse = loginInput;
+      } else {
+        final student = await _studentService.getStudentByStudentId(loginInput);
+        emailToUse = student?.email;
+      }
+
+      if (emailToUse == null || emailToUse.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Student ID not found.')),
+          );
+        }
+        return;
+      }
 
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text,
+        email: emailToUse,
         password: _passwordController.text,
       );
 
@@ -115,37 +132,59 @@ class _LoginScreenState extends State<LoginScreen>
       await Future.delayed(const Duration(seconds: 2));
 
       if (mounted) {
-        // Navigate with smooth slide + fade transition animation
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const HomeScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              // Slide animation (from right to center)
-              const begin = Offset(1.0, 0.0);
-              const end = Offset.zero;
-              const curve = Curves.easeInOutCubic;
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) return;
 
-              var slideAnimation = Tween<Offset>(begin: begin, end: end).animate(
-                CurvedAnimation(parent: animation, curve: curve),
-              );
+        // Check if user is admin
+        final isAdmin = await _adminService.isCurrentUserAdmin();
 
-              // Fade animation (from transparent to opaque)
-              var fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-                CurvedAnimation(parent: animation, curve: curve),
-              );
+        if (!mounted) return;
 
-              return FadeTransition(
-                opacity: fadeAnimation,
-                child: SlideTransition(
-                  position: slideAnimation,
-                  child: child,
-                ),
-              );
-            },
-            transitionDuration: const Duration(milliseconds: 600),
-          ),
-        );
+        if (isAdmin) {
+          Navigator.of(context).pushReplacementNamed('/admin-dashboard');
+        } else {
+          // Check if student needs password change
+          final mustChange = await _studentService.mustChangePassword(user.uid);
+
+          if (!mounted) return;
+
+          if (mustChange) {
+            Navigator.of(context).pushReplacementNamed('/change-password');
+          } else {
+            // Navigate to home with animation
+            Navigator.of(context).pushReplacement(
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    const HomeScreen(),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                      const begin = Offset(1.0, 0.0);
+                      const end = Offset.zero;
+                      const curve = Curves.easeInOutCubic;
+
+                      var slideAnimation = Tween<Offset>(begin: begin, end: end)
+                          .animate(
+                            CurvedAnimation(parent: animation, curve: curve),
+                          );
+
+                      var fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
+                          .animate(
+                            CurvedAnimation(parent: animation, curve: curve),
+                          );
+
+                      return FadeTransition(
+                        opacity: fadeAnimation,
+                        child: SlideTransition(
+                          position: slideAnimation,
+                          child: child,
+                        ),
+                      );
+                    },
+                transitionDuration: const Duration(milliseconds: 600),
+              ),
+            );
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -307,18 +346,21 @@ class _LoginScreenState extends State<LoginScreen>
                                             ),
                                             const SizedBox(height: 4),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 3,
-                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 3,
+                                                  ),
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFF10B981)
-                                                    .withOpacity(0.2),
+                                                color: const Color(
+                                                  0xFF10B981,
+                                                ).withOpacity(0.2),
                                                 borderRadius:
                                                     BorderRadius.circular(6),
                                                 border: Border.all(
-                                                  color: const Color(0xFF10B981)
-                                                      .withOpacity(0.4),
+                                                  color: const Color(
+                                                    0xFF10B981,
+                                                  ).withOpacity(0.4),
                                                   width: 0.8,
                                                 ),
                                               ),
@@ -334,8 +376,7 @@ class _LoginScreenState extends State<LoginScreen>
                                                   Text(
                                                     'Official',
                                                     style: TextStyle(
-                                                      color:
-                                                          Color(0xFF10B981),
+                                                      color: Color(0xFF10B981),
                                                       fontSize: 10,
                                                       fontWeight:
                                                           FontWeight.w600,
