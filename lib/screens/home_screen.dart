@@ -1,8 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/student_service.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final StudentService _studentService = StudentService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Redirect to student dashboard after a brief delay
+    Future.delayed(const Duration(milliseconds: 500), () async {
+      final user = FirebaseAuth.instance.currentUser;
+      if (!mounted || user == null) {
+        return;
+      }
+
+      final mustChange = await _studentService.mustChangePassword(user.uid);
+      if (!mounted) {
+        return;
+      }
+
+      if (mustChange) {
+        Navigator.of(context).pushReplacementNamed('/change-password');
+      } else {
+        Navigator.of(context).pushReplacementNamed('/student-dashboard');
+      }
+    });
+  }
 
   Future<void> _logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
@@ -71,18 +102,12 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       user?.email ?? 'User',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                     const SizedBox(height: 24),
                     const Text(
-                      'You are successfully logged in!',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF1E40AF),
-                      ),
+                      'Redirecting to your dashboard...',
+                      style: TextStyle(fontSize: 16, color: Color(0xFF1E40AF)),
                     ),
                   ],
                 ),
