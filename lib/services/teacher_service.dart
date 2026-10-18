@@ -114,15 +114,34 @@ class TeacherService {
     required String subjectId,
   }) async {
     final currentTeacher = _auth.currentUser;
+    String teacherName = 'Faculty Educator';
+    if (currentTeacher != null) {
+      try {
+        final tDoc = await _firestore.collection('teachers').doc(currentTeacher.uid).get();
+        if (tDoc.exists && tDoc.data() != null) {
+          teacherName = tDoc.data()!['name'] ?? currentTeacher.displayName ?? 'Faculty Educator';
+        }
+      } catch (_) {}
+    }
+
+    final now = DateTime.now();
+    final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
     await _firestore.collection('classes').add({
       'classTitle': title,
       'batchId': batchId,
+      'batchName': '2026 A/L Science & Tech',
       'subjectId': subjectId,
+      'subjectName': 'Combined Mathematics',
       'teacherId': currentTeacher?.uid ?? '',
+      'teacherName': teacherName,
       'zoomLink': zoomLink,
-      'scheduledDateTime': DateTime.now().toIso8601String(),
+      'date': dateStr,
+      'time': timeStr,
+      'scheduledDateTime': now.toIso8601String(),
       'durationMinutes': durationMinutes,
-      'createdAt': DateTime.now().toIso8601String(),
+      'createdAt': now.toIso8601String(),
     });
   }
 
@@ -135,13 +154,18 @@ class TeacherService {
     required String status, // 'present', 'absent', 'late'
   }) async {
     final currentTeacher = _auth.currentUser;
+    final now = DateTime.now();
+    final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
     await _firestore.collection('attendance').add({
       'classId': classId,
       'studentId': studentUid,
+      'studentUid': studentUid,
       'batchId': batchId,
       'subjectId': subjectId,
       'status': status,
-      'markedBy': currentTeacher?.uid ?? 'unknown',
+      'date': dateStr,
+      'markedBy': currentTeacher?.uid ?? 'teacher',
       'timestamp': FieldValue.serverTimestamp(),
     });
   }
