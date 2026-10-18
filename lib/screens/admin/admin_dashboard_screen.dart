@@ -369,15 +369,30 @@ class _AdminManageStudentsTabState extends State<AdminManageStudentsTab> {
                 controller: studentIdCtrl,
                 decoration: const InputDecoration(labelText: 'Student ID *', hintText: 'STU-000000'),
               ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: selectedBatch,
-                decoration: const InputDecoration(labelText: 'Batch Enrollment'),
-                items: ['2026 A/L Science & Tech', '2027 A/L Foundation', 'General Batch']
-                    .map((b) => DropdownMenuItem(value: b, child: Text(b)))
-                    .toList(),
-                onChanged: (val) {
-                  if (val != null) selectedBatch = val;
+              const SizedBox(height: 12),
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('batches').snapshots(),
+                builder: (context, snapshot) {
+                  final docs = snapshot.data?.docs ?? [];
+                  if (docs.isEmpty) {
+                    return const Text('No batches registered in database yet.', style: TextStyle(color: Colors.grey, fontSize: 12));
+                  }
+                  if (selectedBatch.isEmpty && docs.isNotEmpty) {
+                    final firstData = docs.first.data() as Map<String, dynamic>;
+                    selectedBatch = firstData['name'] ?? docs.first.id;
+                  }
+                  return DropdownButtonFormField<String>(
+                    initialValue: selectedBatch.isNotEmpty ? selectedBatch : null,
+                    decoration: const InputDecoration(labelText: 'Select Batch from Database *'),
+                    items: docs.map((b) {
+                      final bdata = b.data() as Map<String, dynamic>;
+                      final bname = bdata['name'] ?? b.id;
+                      return DropdownMenuItem<String>(value: bname, child: Text(bname));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) selectedBatch = val;
+                    },
+                  );
                 },
               ),
             ],
@@ -706,10 +721,26 @@ class _AdminManageTeachersTabState extends State<AdminManageTeachersTab> {
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(labelText: 'Phone Contact *', hintText: '0779876543'),
               ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: subjectCtrl,
-                decoration: const InputDecoration(labelText: 'Primary Subject *', hintText: 'e.g. Combined Mathematics'),
+              const SizedBox(height: 12),
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('subjects').snapshots(),
+                builder: (context, snapshot) {
+                  final docs = snapshot.data?.docs ?? [];
+                  if (docs.isEmpty) {
+                    return const Text('No subjects in database yet. Add subjects in database.', style: TextStyle(color: Colors.grey, fontSize: 12));
+                  }
+                  return DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(labelText: 'Select Primary Subject *'),
+                    items: docs.map((d) {
+                      final sdata = d.data() as Map<String, dynamic>;
+                      final sname = sdata['name'] ?? d.id;
+                      return DropdownMenuItem<String>(value: sname, child: Text(sname));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) subjectCtrl.text = val;
+                    },
+                  );
+                },
               ),
               const SizedBox(height: 8),
               TextField(
@@ -1033,20 +1064,65 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
                   controller: titleCtrl,
                   decoration: const InputDecoration(labelText: 'Class Title *', hintText: 'e.g. Calculus & Vectors'),
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: subjectCtrl,
-                  decoration: const InputDecoration(labelText: 'Subject *', hintText: 'Combined Mathematics'),
+                const SizedBox(height: 10),
+                // Dynamic Subject from Firestore
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('subjects').snapshots(),
+                  builder: (context, snapshot) {
+                    final docs = snapshot.data?.docs ?? [];
+                    return DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: 'Select Subject from Database *'),
+                      hint: Text(docs.isEmpty ? 'No subjects in database' : 'Choose subject...'),
+                      items: docs.map((d) {
+                        final data = d.data() as Map<String, dynamic>;
+                        final name = data['name'] ?? d.id;
+                        return DropdownMenuItem<String>(value: name, child: Text(name));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) subjectCtrl.text = val;
+                      },
+                    );
+                  },
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: batchCtrl,
-                  decoration: const InputDecoration(labelText: 'Target Batch *', hintText: '2026 A/L Batch'),
+                const SizedBox(height: 10),
+                // Dynamic Batch from Firestore
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('batches').snapshots(),
+                  builder: (context, snapshot) {
+                    final docs = snapshot.data?.docs ?? [];
+                    return DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: 'Select Target Batch from Database *'),
+                      hint: Text(docs.isEmpty ? 'No batches in database' : 'Choose batch...'),
+                      items: docs.map((d) {
+                        final data = d.data() as Map<String, dynamic>;
+                        final name = data['name'] ?? d.id;
+                        return DropdownMenuItem<String>(value: name, child: Text(name));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) batchCtrl.text = val;
+                      },
+                    );
+                  },
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: teacherCtrl,
-                  decoration: const InputDecoration(labelText: 'Assigned Teacher *', hintText: 'Teacher Name'),
+                const SizedBox(height: 10),
+                // Dynamic Teacher from Firestore
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('teachers').snapshots(),
+                  builder: (context, snapshot) {
+                    final docs = snapshot.data?.docs ?? [];
+                    return DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: 'Assign Faculty Teacher from Database *'),
+                      hint: Text(docs.isEmpty ? 'No teachers in database' : 'Choose teacher...'),
+                      items: docs.map((d) {
+                        final data = d.data() as Map<String, dynamic>;
+                        final name = data['name'] ?? d.id;
+                        return DropdownMenuItem<String>(value: name, child: Text(name));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) teacherCtrl.text = val;
+                      },
+                    );
+                  },
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -1127,8 +1203,25 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Class Title')),
-            const SizedBox(height: 8),
-            TextField(controller: teacherCtrl, decoration: const InputDecoration(labelText: 'Teacher Name')),
+            const SizedBox(height: 10),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('teachers').snapshots(),
+              builder: (context, snapshot) {
+                final docs = snapshot.data?.docs ?? [];
+                return DropdownButtonFormField<String>(
+                  initialValue: teacherCtrl.text.isNotEmpty ? teacherCtrl.text : null,
+                  decoration: const InputDecoration(labelText: 'Assigned Teacher from Database'),
+                  items: docs.map((d) {
+                    final tdata = d.data() as Map<String, dynamic>;
+                    final tname = tdata['name'] ?? d.id;
+                    return DropdownMenuItem<String>(value: tname, child: Text(tname));
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) teacherCtrl.text = val;
+                  },
+                );
+              },
+            ),
             const SizedBox(height: 8),
             TextField(controller: linkCtrl, decoration: const InputDecoration(labelText: 'Zoom Link')),
           ],

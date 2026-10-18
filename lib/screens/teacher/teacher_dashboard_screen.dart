@@ -712,8 +712,25 @@ class TeacherMaterialsAndAssignmentsTab extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Assignment Title *', hintText: 'e.g. Calculus Problem Set 1')),
-              const SizedBox(height: 8),
-              TextField(controller: subjectCtrl, decoration: const InputDecoration(labelText: 'Subject *', hintText: 'Combined Mathematics')),
+              const SizedBox(height: 10),
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('subjects').snapshots(),
+                builder: (context, snapshot) {
+                  final docs = snapshot.data?.docs ?? [];
+                  return DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(labelText: 'Select Subject from Database *'),
+                    hint: Text(docs.isEmpty ? 'No subjects in database' : 'Choose subject...'),
+                    items: docs.map((d) {
+                      final data = d.data() as Map<String, dynamic>;
+                      final name = data['name'] ?? d.id;
+                      return DropdownMenuItem<String>(value: name, child: Text(name));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) subjectCtrl.text = val;
+                    },
+                  );
+                },
+              ),
               const SizedBox(height: 8),
               TextField(controller: teacherCtrl, decoration: const InputDecoration(labelText: 'Teacher / Instructor')),
               const SizedBox(height: 8),
