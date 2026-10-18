@@ -1,8 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../models/teacher.dart';
-import '../models/zoom_class.dart';
-import '../models/batch.dart';
 import '../models/student.dart';
 
 class TeacherService {
@@ -16,7 +13,7 @@ class TeacherService {
 
   TeacherService._internal();
 
-  /// Check if the currently logged in user is a registered teacher
+  /// Check if the current user is a teacher
   Future<bool> isCurrentUserTeacher() async {
     try {
       final user = _auth.currentUser;
@@ -29,68 +26,36 @@ class TeacherService {
     }
   }
 
-  /// Get teacher profile by Firebase Auth UID
-  Future<Teacher?> getTeacherProfile(String uid) async {
+  /// Resolve teacher profile by teacher ID
+  Future<Map<String, dynamic>?> getTeacherByTeacherId(String teacherId) async {
     try {
-      final doc = await _firestore.collection('teachers').doc(uid).get();
-      if (doc.exists && doc.data() != null) {
-        return Teacher.fromJson(doc.data()!, doc.id);
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Get teacher by custom ID (e.g. TCH-0001)
-  Future<Teacher?> getTeacherByTeacherId(String teacherId) async {
-    try {
-      final snapshot = await _firestore
+      final query = await _firestore
           .collection('teachers')
-          .where('teacherId', isEqualTo: teacherId.toUpperCase())
+          .where('teacherId', isEqualTo: teacherId)
           .limit(1)
           .get();
 
-      if (snapshot.docs.isNotEmpty) {
-        return Teacher.fromJson(
-          snapshot.docs.first.data(),
-          snapshot.docs.first.id,
-        );
-      }
-      return null;
+      if (query.docs.isEmpty) return null;
+      return query.docs.first.data();
     } catch (e) {
       return null;
     }
   }
 
-  /// Stream classes assigned to this teacher
-  Stream<List<ZoomClass>> getTeacherClasses(String teacherUid) {
+  /// Get classes assigned to current teacher
+  Stream<QuerySnapshot> streamTeacherClasses() {
+    final currentTeacher = _auth.currentUser;
+    if (currentTeacher == null) {
+      return const Stream.empty();
+    }
     return _firestore
         .collection('classes')
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs
-              .map((doc) => ZoomClass.fromJson(doc.data(), doc.id))
-              .toList();
-        });
-  }
-
-  /// Get all batches assigned to teacher
-  Future<List<Batch>> getTeacherBatches(List<String> batchIds) async {
-    if (batchIds.isEmpty) return [];
-    try {
-      final snapshot = await _firestore.collection('batches').get();
-      return snapshot.docs
-          .where((doc) => batchIds.contains(doc.id))
-          .map((doc) => Batch.fromJson(doc.data(), doc.id))
-          .toList();
-    } catch (e) {
-      return [];
-    }
+        .where('teacherId', isEqualTo: currentTeacher.uid)
+        .snapshots();
   }
 
   /// Get students enrolled in a specific batch
-  Future<List<Student>> getStudentsInBatch(String batchId) async {
+  Future<List<Student>> getStudentsForBatch(String batchId) async {
     try {
       final snapshot = await _firestore
           .collection('students')
@@ -105,13 +70,15 @@ class TeacherService {
     }
   }
 
-  /// Create / publish a new live class
+  /// Create / publish a new live class with dynamic batch and subject
   Future<void> createLiveClass({
     required String title,
     required String zoomLink,
     required int durationMinutes,
     required String batchId,
+    required String batchName,
     required String subjectId,
+    required String subjectName,
   }) async {
     final currentTeacher = _auth.currentUser;
     String teacherName = 'Faculty Educator';
@@ -131,9 +98,9 @@ class TeacherService {
     await _firestore.collection('classes').add({
       'classTitle': title,
       'batchId': batchId,
-      'batchName': '2026 A/L Science & Tech',
+      'batchName': batchName,
       'subjectId': subjectId,
-      'subjectName': 'Combined Mathematics',
+      'subjectName': subjectName,
       'teacherId': currentTeacher?.uid ?? '',
       'teacherName': teacherName,
       'zoomLink': zoomLink,
@@ -145,12 +112,14 @@ class TeacherService {
     });
   }
 
-  /// Mark attendance for a student
+  /// Mark attendance for a student with dynamic session information
   Future<void> markAttendance({
     required String classId,
     required String studentUid,
     required String batchId,
+    required String batchName,
     required String subjectId,
+    required String subjectName,
     required String status, // 'present', 'absent', 'late'
   }) async {
     final currentTeacher = _auth.currentUser;
@@ -162,7 +131,9 @@ class TeacherService {
       'studentId': studentUid,
       'studentUid': studentUid,
       'batchId': batchId,
+      'batchName': batchName,
       'subjectId': subjectId,
+      'subjectName': subjectName,
       'status': status,
       'date': dateStr,
       'markedBy': currentTeacher?.uid ?? 'teacher',

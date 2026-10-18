@@ -91,11 +91,12 @@ class TeacherScheduleTab extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Educator Workspace', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Educator Workspace', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: const Color(0xFF059669),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
             onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
           ),
         ],
@@ -122,6 +123,13 @@ class TeacherScheduleTab extends StatelessWidget {
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF059669).withValues(alpha: 0.25),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
@@ -165,6 +173,7 @@ class TeacherScheduleTab extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: const Center(
                       child: Text('No live classes scheduled in Firestore yet.', style: TextStyle(color: Colors.grey)),
@@ -182,6 +191,9 @@ class TeacherScheduleTab extends StatelessWidget {
                     final title = c['classTitle'] ?? 'Live Class';
                     final zoomLink = c['zoomLink'] ?? '';
                     final duration = c['durationMinutes'] ?? 60;
+                    final subject = c['subjectName'] ?? 'General Subject';
+                    final batch = c['batchName'] ?? 'Enrolled Students';
+                    final dateStr = c['date'] ?? 'Upcoming';
 
                     return Container(
                       padding: const EdgeInsets.all(16),
@@ -205,15 +217,17 @@ class TeacherScheduleTab extends StatelessWidget {
                                   color: const Color(0xFFD1FAE5),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Text('READY',
-                                    style: TextStyle(color: Color(0xFF059669), fontSize: 10, fontWeight: FontWeight.bold)),
+                                child: const Text(
+                                  'LIVE READY',
+                                  style: TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold, fontSize: 10),
+                                ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
-                          Text('Duration: $duration mins',
-                              style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 4),
+                          Text('Subject: $subject • Batch: $batch • $duration mins ($dateStr)',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                          const SizedBox(height: 12),
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
@@ -222,8 +236,8 @@ class TeacherScheduleTab extends StatelessWidget {
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
-                              icon: const Icon(Icons.video_call, size: 18),
-                              label: const Text('Start / Host Zoom Class'),
+                              icon: const Icon(Icons.videocam, size: 18),
+                              label: const Text('Start / Host Live Zoom Session'),
                               onPressed: () => _launchZoom(context, zoomLink),
                             ),
                           ),
@@ -242,7 +256,7 @@ class TeacherScheduleTab extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// TEACHER TAB 2: CREATE LIVE CLASS (SAVES TO FIRESTORE)
+// TEACHER TAB 2: CREATE LIVE CLASS (DYNAMIC FIRESTORE SELECTION)
 // ─────────────────────────────────────────────────────────────
 class TeacherCreateClassTab extends StatefulWidget {
   const TeacherCreateClassTab({super.key});
@@ -256,6 +270,11 @@ class _TeacherCreateClassTabState extends State<TeacherCreateClassTab> {
   final _linkController = TextEditingController(text: 'https://zoom.us/j/');
   int _selectedDuration = 90;
   bool _isSaving = false;
+
+  String? _selectedBatchId;
+  String _selectedBatchName = '';
+  String? _selectedSubjectId;
+  String _selectedSubjectName = '';
 
   Future<void> _publishClass() async {
     final title = _titleController.text.trim();
@@ -276,14 +295,16 @@ class _TeacherCreateClassTabState extends State<TeacherCreateClassTab> {
         title: title,
         zoomLink: link,
         durationMinutes: _selectedDuration,
-        batchId: 'batch_2026_al',
-        subjectId: 'sub_maths',
+        batchId: _selectedBatchId ?? 'general_batch',
+        batchName: _selectedBatchName.isNotEmpty ? _selectedBatchName : 'All Enrolled Batches',
+        subjectId: _selectedSubjectId ?? 'general_sub',
+        subjectName: _selectedSubjectName.isNotEmpty ? _selectedSubjectName : 'Core Subject',
       );
 
       _titleController.clear();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Class published to Firestore! Students can now see it.')),
+          const SnackBar(content: Text('Class published to Firestore! Available to students immediately.')),
         );
       }
     } catch (e) {
@@ -322,6 +343,82 @@ class _TeacherCreateClassTabState extends State<TeacherCreateClassTab> {
                 fillColor: Colors.white,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
+            ),
+            const SizedBox(height: 16),
+
+            // Real Firestore Batches Selection
+            const Text('Select Academic Batch (Firestore)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('batches').snapshots(),
+              builder: (context, snapshot) {
+                final docs = snapshot.data?.docs ?? [];
+                return DropdownButtonFormField<String>(
+                  initialValue: _selectedBatchId,
+                  decoration: InputDecoration(
+                    hintText: docs.isEmpty ? 'No batches in Firestore' : 'Select target batch...',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  items: docs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final name = data['name'] ?? doc.id;
+                    return DropdownMenuItem<String>(
+                      value: doc.id,
+                      child: Text(name),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      final match = docs.firstWhere((d) => d.id == val);
+                      final data = match.data() as Map<String, dynamic>;
+                      setState(() {
+                        _selectedBatchId = val;
+                        _selectedBatchName = data['name'] ?? val;
+                      });
+                    }
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Real Firestore Subjects Selection
+            const Text('Select Subject (Firestore)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('subjects').snapshots(),
+              builder: (context, snapshot) {
+                final docs = snapshot.data?.docs ?? [];
+                return DropdownButtonFormField<String>(
+                  initialValue: _selectedSubjectId,
+                  decoration: InputDecoration(
+                    hintText: docs.isEmpty ? 'No subjects in Firestore' : 'Select subject...',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  items: docs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final name = data['name'] ?? doc.id;
+                    return DropdownMenuItem<String>(
+                      value: doc.id,
+                      child: Text(name),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      final match = docs.firstWhere((d) => d.id == val);
+                      final data = match.data() as Map<String, dynamic>;
+                      setState(() {
+                        _selectedSubjectId = val;
+                        _selectedSubjectName = data['name'] ?? val;
+                      });
+                    }
+                  },
+                );
+              },
             ),
             const SizedBox(height: 16),
 
@@ -383,7 +480,7 @@ class _TeacherCreateClassTabState extends State<TeacherCreateClassTab> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// TEACHER TAB 3: MARK ATTENDANCE (LIVE FIRESTORE STUDENTS)
+// TEACHER TAB 3: MARK ATTENDANCE (FIRESTORE STUDENTS & SESSIONS)
 // ─────────────────────────────────────────────────────────────
 class TeacherMarkAttendanceTab extends StatefulWidget {
   const TeacherMarkAttendanceTab({super.key});
@@ -394,6 +491,8 @@ class TeacherMarkAttendanceTab extends StatefulWidget {
 
 class _TeacherMarkAttendanceTabState extends State<TeacherMarkAttendanceTab> {
   final Map<String, bool> _attendanceState = {};
+  String? _selectedSessionTitle;
+  final String _selectedBatchName = 'All Batches';
 
   @override
   Widget build(BuildContext context) {
@@ -422,33 +521,68 @@ class _TeacherMarkAttendanceTabState extends State<TeacherMarkAttendanceTab> {
 
           return Column(
             children: [
+              // Session Selector Header
               Container(
                 padding: const EdgeInsets.all(16),
                 color: Colors.white,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Live Student Roster', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        Text('Firestore Synchronized', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                      ],
+                    // Dynamic Class Session Stream from Firestore
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance.collection('classes').snapshots(),
+                      builder: (context, classSnap) {
+                        final classDocs = classSnap.data?.docs ?? [];
+                        return DropdownButtonFormField<String>(
+                          initialValue: _selectedSessionTitle,
+                          decoration: InputDecoration(
+                            labelText: 'Class Session for Attendance',
+                            hintText: classDocs.isEmpty ? 'Live Classroom Session' : 'Select session...',
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          items: classDocs.map((cd) {
+                            final cdata = cd.data() as Map<String, dynamic>;
+                            final title = cdata['classTitle'] ?? 'Session ${cd.id}';
+                            return DropdownMenuItem<String>(
+                              value: title,
+                              child: Text(title, overflow: TextOverflow.ellipsis),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _selectedSessionTitle = val);
+                            }
+                          },
+                        );
+                      },
                     ),
+                    const SizedBox(height: 12),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(color: const Color(0xFFD1FAE5), borderRadius: BorderRadius.circular(6)),
-                          child: Text('Present: $presentCount',
-                              style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold, fontSize: 11)),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Live Student Roster', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text('Firestore Synchronized', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(6)),
-                          child: Text('Absent: $absentCount',
-                              style: const TextStyle(color: Color(0xFFDC2626), fontWeight: FontWeight.bold, fontSize: 11)),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: const Color(0xFFD1FAE5), borderRadius: BorderRadius.circular(6)),
+                              child: Text('Present: $presentCount',
+                                  style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold, fontSize: 11)),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(6)),
+                              child: Text('Absent: $absentCount',
+                                  style: const TextStyle(color: Color(0xFFDC2626), fontWeight: FontWeight.bold, fontSize: 11)),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -497,7 +631,7 @@ class _TeacherMarkAttendanceTabState extends State<TeacherMarkAttendanceTab> {
                           ),
                           Switch(
                             value: isPresent,
-                            activeColor: const Color(0xFF059669),
+                            activeThumbColor: const Color(0xFF059669),
                             onChanged: (val) {
                               setState(() {
                                 _attendanceState[docId] = val;
@@ -525,13 +659,17 @@ class _TeacherMarkAttendanceTabState extends State<TeacherMarkAttendanceTab> {
                     label: const Text('Save & Submit Attendance to Firestore'),
                     onPressed: () async {
                       final teacherService = TeacherService();
+                      final sessionTitle = _selectedSessionTitle ?? 'Live Lecture Session';
+
                       for (final doc in docs) {
                         final isPresent = _attendanceState[doc.id] ?? true;
                         await teacherService.markAttendance(
-                          classId: 'live_session',
+                          classId: sessionTitle,
                           studentUid: doc.id,
-                          batchId: 'batch_2026_al',
-                          subjectId: 'sub_maths',
+                          batchId: 'batch_active',
+                          batchName: _selectedBatchName,
+                          subjectId: 'sub_active',
+                          subjectName: 'Active Subject',
                           status: isPresent ? 'present' : 'absent',
                         );
                       }
@@ -553,10 +691,66 @@ class _TeacherMarkAttendanceTabState extends State<TeacherMarkAttendanceTab> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// TEACHER TAB 4: TASKS & MATERIALS (FIRESTORE ASSIGNMENT CREATOR)
+// TEACHER TAB 4: TASKS & MATERIALS (FIRESTORE ASSIGNMENTS)
 // ─────────────────────────────────────────────────────────────
 class TeacherMaterialsAndAssignmentsTab extends StatelessWidget {
   const TeacherMaterialsAndAssignmentsTab({super.key});
+
+  void _showCreateAssignmentDialog(BuildContext context) {
+    final titleCtrl = TextEditingController();
+    final subjectCtrl = TextEditingController(text: 'Combined Mathematics');
+    final teacherCtrl = TextEditingController(text: 'Faculty Educator');
+    final dueCtrl = TextEditingController(text: 'Next Monday');
+    final pointsCtrl = TextEditingController(text: '100');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Create New Homework / Task'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Assignment Title *', hintText: 'e.g. Calculus Problem Set 1')),
+              const SizedBox(height: 8),
+              TextField(controller: subjectCtrl, decoration: const InputDecoration(labelText: 'Subject *', hintText: 'Combined Mathematics')),
+              const SizedBox(height: 8),
+              TextField(controller: teacherCtrl, decoration: const InputDecoration(labelText: 'Teacher / Instructor')),
+              const SizedBox(height: 8),
+              TextField(controller: dueCtrl, decoration: const InputDecoration(labelText: 'Due Date *', hintText: 'e.g. Friday, 5 PM')),
+              const SizedBox(height: 8),
+              TextField(controller: pointsCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Points')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
+            onPressed: () async {
+              if (titleCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx);
+              await FirebaseFirestore.instance.collection('assignments').add({
+                'title': titleCtrl.text.trim(),
+                'subject': subjectCtrl.text.trim(),
+                'teacher': teacherCtrl.text.trim(),
+                'dueDate': dueCtrl.text.trim(),
+                'isPending': true,
+                'totalPoints': int.tryParse(pointsCtrl.text.trim()) ?? 100,
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Homework task published to Firestore! Students can see it live.')),
+                );
+              }
+            },
+            child: const Text('Publish Task'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -565,11 +759,27 @@ class TeacherMaterialsAndAssignmentsTab extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Course Materials & Homework'),
         backgroundColor: const Color(0xFF059669),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_task),
+            tooltip: 'Create Assignment',
+            onPressed: () => _showCreateAssignmentDialog(context),
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFF059669),
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('New Assignment'),
+        onPressed: () => _showCreateAssignmentDialog(context),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 80),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Upload Material Card
             _buildActionCard(
               title: 'Upload Study Material / PDF Notes',
               subtitle: 'Share theory handouts & lecture slides with enrolled batches',
@@ -577,31 +787,101 @@ class TeacherMaterialsAndAssignmentsTab extends StatelessWidget {
               color: const Color(0xFF2563EB),
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('File picker opened for study materials')),
+                  const SnackBar(content: Text('Storage file picker triggered for course materials.')),
                 );
               },
             ),
-            const SizedBox(height: 12),
-            _buildActionCard(
-              title: 'Create & Assign Homework (Firestore)',
-              subtitle: 'Publish assignments directly to Firestore for students to see live',
-              icon: Icons.post_add,
-              color: const Color(0xFFD97706),
-              onTap: () async {
-                await FirebaseFirestore.instance.collection('assignments').add({
-                  'title': 'Applied Mathematics Problem Set',
-                  'subject': 'Combined Mathematics',
-                  'teacher': 'Mr. K. Perera',
-                  'dueDate': 'Next Week',
-                  'isPending': true,
-                  'totalPoints': 100,
-                  'createdAt': FieldValue.serverTimestamp(),
-                });
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('New assignment added to Firestore! Check Student tab.')),
+            const SizedBox(height: 20),
+
+            // Live Firestore Assignments List
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Published Assignments (Firestore)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                IconButton(
+                  icon: const Icon(Icons.add_circle, color: Color(0xFF059669)),
+                  onPressed: () => _showCreateAssignmentDialog(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('assignments').snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final docs = snapshot.data?.docs ?? [];
+                if (docs.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: const Center(
+                      child: Text('No homework assignments published yet. Tap "New Assignment" to add one.',
+                          style: TextStyle(color: Colors.grey), textAlign: TextAlign.center),
+                    ),
                   );
                 }
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: docs.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) {
+                    final d = docs[i];
+                    final task = d.data() as Map<String, dynamic>;
+                    final title = task['title'] ?? 'Task';
+                    final subject = task['subject'] ?? 'General';
+                    final due = task['dueDate'] ?? 'Soon';
+                    final pts = task['totalPoints'] ?? 100;
+
+                    return Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: const Color(0xFFFEF3C7),
+                            child: const Icon(Icons.assignment, color: Color(0xFFD97706), size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                Text('$subject • Due: $due • $pts Pts',
+                                    style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFDC2626)),
+                            onPressed: () async {
+                              await FirebaseFirestore.instance.collection('assignments').doc(d.id).delete();
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Assignment deleted from Firestore.')),
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
               },
             ),
           ],
@@ -624,33 +904,23 @@ class TeacherMaterialsAndAssignmentsTab extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              CircleAvatar(backgroundColor: color.withValues(alpha: 0.15), child: Icon(icon, color: color)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    const SizedBox(height: 2),
-                    Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white),
-              onPressed: onTap,
-              child: const Text('Add via Firestore', style: TextStyle(fontSize: 12)),
+          CircleAvatar(backgroundColor: color.withValues(alpha: 0.15), child: Icon(icon, color: color)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+              ],
             ),
+          ),
+          IconButton(
+            icon: Icon(Icons.arrow_forward_ios, size: 14, color: color),
+            onPressed: onTap,
           ),
         ],
       ),
