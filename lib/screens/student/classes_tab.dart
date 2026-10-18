@@ -253,6 +253,23 @@ class _ClassesTabState extends State<ClassesTab> with SingleTickerProviderStateM
                       ),
                     ],
                   ),
+                  if ((data['recordingLink'] ?? '').toString().trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF7C3AED),
+                          side: const BorderSide(color: Color(0xFF7C3AED)),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        icon: const Icon(Icons.play_circle_fill, size: 18),
+                        label: const Text('Watch Class Recording / Replay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        onPressed: () => _launchZoom(context, data['recordingLink']),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             );

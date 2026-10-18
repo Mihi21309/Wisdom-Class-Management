@@ -837,8 +837,71 @@ class _AdminManageStudentsTabState extends State<AdminManageStudentsTab> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(email, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                                if (phone.isNotEmpty)
-                                  Text('Phone: $phone', style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    InkWell(
+                                      onTap: () async {
+                                        final currentStatus = data['feeStatus'] ?? 'Paid';
+                                        final newStatus = currentStatus == 'Paid' ? 'Due' : 'Paid';
+                                        final month = data['feeMonth'] ?? 'October 2026';
+                                        await AdminService().updateStudentFeeStatus(
+                                          studentDocId: doc.id,
+                                          feeStatus: newStatus,
+                                          feeMonth: month,
+                                        );
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('$name fee marked as $newStatus ($month)'),
+                                              duration: const Duration(seconds: 1),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: (data['feeStatus'] ?? 'Paid') == 'Paid'
+                                              ? const Color(0xFFD1FAE5)
+                                              : const Color(0xFFFEE2E2),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              (data['feeStatus'] ?? 'Paid') == 'Paid'
+                                                  ? Icons.check_circle
+                                                  : Icons.warning_amber_rounded,
+                                              size: 11,
+                                              color: (data['feeStatus'] ?? 'Paid') == 'Paid'
+                                                  ? const Color(0xFF059669)
+                                                  : const Color(0xFFDC2626),
+                                            ),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              (data['feeStatus'] ?? 'Paid') == 'Paid'
+                                                  ? 'Fee: Paid (${data['feeMonth'] ?? 'Oct'})'
+                                                  : 'Fee: Overdue / Due',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: (data['feeStatus'] ?? 'Paid') == 'Paid'
+                                                    ? const Color(0xFF059669)
+                                                    : const Color(0xFFDC2626),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    if (phone.isNotEmpty) ...[
+                                      const SizedBox(width: 8),
+                                      Text('📞 $phone', style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+                                    ],
+                                  ],
+                                ),
                               ],
                             ),
                           ),
@@ -1289,10 +1352,13 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
   void _showAddClassDialog(BuildContext context) {
     final titleCtrl = TextEditingController();
     final linkCtrl = TextEditingController(text: 'https://zoom.us/j/');
+    final recordingCtrl = TextEditingController();
     final subjectCtrl = TextEditingController(text: 'Combined Mathematics');
     final batchCtrl = TextEditingController(text: '2026 A/L Science & Tech');
     final teacherCtrl = TextEditingController(text: 'Mr. K. Perera');
     int selectedDuration = 90;
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay selectedTime = const TimeOfDay(hour: 9, minute: 0);
 
     showDialog(
       context: context,
@@ -1308,6 +1374,7 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextField(
                   controller: titleCtrl,
@@ -1379,14 +1446,67 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
                     );
                   },
                 ),
+                const SizedBox(height: 12),
+                const Text('Session Schedule Date & Time *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.calendar_today, size: 15, color: Color(0xFF7C3AED)),
+                        label: Text(
+                          '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime.now().subtract(const Duration(days: 7)),
+                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (picked != null) {
+                            setModalState(() => selectedDate = picked);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.access_time, size: 15, color: Color(0xFF7C3AED)),
+                        label: Text(
+                          selectedTime.format(context),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                        onPressed: () async {
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: selectedTime,
+                          );
+                          if (picked != null) {
+                            setModalState(() => selectedTime = picked);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: linkCtrl,
-                  decoration: const InputDecoration(labelText: 'Zoom Meeting Link *', hintText: 'https://zoom.us/...'),
+                  decoration: const InputDecoration(labelText: 'Live Zoom Meeting Link *', hintText: 'https://zoom.us/...'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: recordingCtrl,
+                  decoration: const InputDecoration(labelText: 'Recording / Playback Link (Optional)', hintText: 'https://youtube.com/... or Google Drive'),
                 ),
                 const SizedBox(height: 12),
+                const Text('Duration (Minutes)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                const SizedBox(height: 4),
                 Row(
-                  children: [60, 90, 120].map((dur) {
+                  children: [60, 90, 120, 180].map((dur) {
                     final isSel = selectedDuration == dur;
                     return Padding(
                       padding: const EdgeInsets.only(right: 6),
@@ -1417,21 +1537,26 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
                   return;
                 }
                 Navigator.pop(ctx);
-                final now = DateTime.now();
+                final dateStr = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+                final timeStr = '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
+                final scheduledDateTime = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, selectedTime.hour, selectedTime.minute);
+
                 await FirebaseFirestore.instance.collection('classes').add({
                   'classTitle': titleCtrl.text.trim(),
                   'subjectName': subjectCtrl.text.trim(),
                   'batchName': batchCtrl.text.trim(),
                   'teacherName': teacherCtrl.text.trim(),
                   'zoomLink': linkCtrl.text.trim(),
+                  'recordingLink': recordingCtrl.text.trim(),
                   'durationMinutes': selectedDuration,
-                  'date': '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
-                  'time': '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
-                  'createdAt': now.toIso8601String(),
+                  'date': dateStr,
+                  'time': timeStr,
+                  'scheduledDateTime': scheduledDateTime.toIso8601String(),
+                  'createdAt': DateTime.now().toIso8601String(),
                 });
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Class published to Firestore! Available to students immediately.')),
+                    const SnackBar(content: Text('Class published with scheduled date & time!')),
                   );
                 }
               },

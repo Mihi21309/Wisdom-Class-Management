@@ -229,6 +229,51 @@ class HomeTab extends StatelessWidget {
                             ),
                           ],
                         ),
+
+                        // Monthly Fee Status Card Banner
+                        Builder(
+                          builder: (context) {
+                            final feeStatus = data?['feeStatus'] ?? 'Paid';
+                            final feeMonth = data?['feeMonth'] ?? 'October 2026';
+                            final isPaid = feeStatus == 'Paid';
+
+                            return Container(
+                              margin: const EdgeInsets.only(top: 14),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isPaid
+                                    ? Colors.white.withValues(alpha: 0.15)
+                                    : const Color(0xFFFEF2F2).withValues(alpha: 0.95),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isPaid ? Colors.white24 : const Color(0xFFFCA5A5),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isPaid ? Icons.verified_user_rounded : Icons.info_outline,
+                                    size: 18,
+                                    color: isPaid ? const Color(0xFF86EFAC) : const Color(0xFFDC2626),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      isPaid
+                                          ? 'Tuition Card: ACTIVE ($feeMonth Paid) • Full Class Access'
+                                          : 'Tuition Fee Due for $feeMonth • Please verify with Admin',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: isPaid ? Colors.white : const Color(0xFF991B1B),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   );

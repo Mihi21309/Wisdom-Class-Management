@@ -25,10 +25,8 @@ class _CreateStudentScreenState extends State<CreateStudentScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
 
-  Set<String> _selectedSubjectIds = {};
+  final Set<String> _selectedSubjectIds = {};
   bool _isLoading = false;
-  String? _generatedStudentId;
-  String? _generatedPassword;
 
   @override
   void dispose() {

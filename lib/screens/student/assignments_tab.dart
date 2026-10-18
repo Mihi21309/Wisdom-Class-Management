@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 
 class AssignmentsTab extends StatefulWidget {
@@ -12,8 +14,24 @@ class AssignmentsTab extends StatefulWidget {
 class _AssignmentsTabState extends State<AssignmentsTab> {
   int _selectedFilterIndex = 0; // 0: All, 1: Pending, 2: Completed
 
+  Future<void> _openResourceLink(BuildContext context, String? url) async {
+    if (url == null || url.trim().isEmpty) return;
+    final uri = Uri.parse(url.trim());
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open resource link.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
@@ -38,12 +56,15 @@ class _AssignmentsTabState extends State<AssignmentsTab> {
                         ),
                       ),
                       StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('assignments')
-                            .where('isPending', isEqualTo: true)
-                            .snapshots(),
+                        stream: FirebaseFirestore.instance.collection('assignments').snapshots(),
                         builder: (context, snapshot) {
-                          final count = snapshot.data?.docs.length ?? 0;
+                          final docs = snapshot.data?.docs ?? [];
+                          final pendingCount = docs.where((d) {
+                            final m = d.data() as Map<String, dynamic>;
+                            final submitted = List<String>.from(m['submittedStudentUids'] ?? []);
+                            return !submitted.contains(uid);
+                          }).length;
+
                           return Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
@@ -51,7 +72,7 @@ class _AssignmentsTabState extends State<AssignmentsTab> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
-                              '$count Pending',
+                              '$pendingCount Pending',
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -68,9 +89,9 @@ class _AssignmentsTabState extends State<AssignmentsTab> {
                   // Filter Chips
                   Row(
                     children: [
-                      _buildFilterChip('All', 0),
+                      _buildFilterChip('All Tasks', 0),
                       const SizedBox(width: 8),
-                      _buildFilterChip('Pending', 1),
+                      _buildFilterChip('To Do', 1),
                       const SizedBox(width: 8),
                       _buildFilterChip('Completed', 2),
                     ],
@@ -91,9 +112,10 @@ class _AssignmentsTabState extends State<AssignmentsTab> {
                   final docs = snapshot.data?.docs ?? [];
                   final filteredDocs = docs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>;
-                    final isPending = data['isPending'] ?? true;
-                    if (_selectedFilterIndex == 1) return isPending == true;
-                    if (_selectedFilterIndex == 2) return isPending == false;
+                    final submitted = List<String>.from(data['submittedStudentUids'] ?? []);
+                    final isCompleted = submitted.contains(uid);
+                    if (_selectedFilterIndex == 1) return !isCompleted;
+                    if (_selectedFilterIndex == 2) return isCompleted;
                     return true;
                   }).toList();
 
@@ -106,7 +128,7 @@ class _AssignmentsTabState extends State<AssignmentsTab> {
                               size: 56, color: Colors.grey.withValues(alpha: 0.6)),
                           const SizedBox(height: 12),
                           const Text(
-                            'No assignments found in Firestore',
+                            'No assignments found in this category',
                             style: TextStyle(color: Colors.grey, fontSize: 15),
                           ),
                         ],
@@ -119,13 +141,15 @@ class _AssignmentsTabState extends State<AssignmentsTab> {
                     itemCount: filteredDocs.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final data = filteredDocs[index].data() as Map<String, dynamic>;
-                      final isPending = data['isPending'] == true;
+                      final doc = filteredDocs[index];
+                      final data = doc.data() as Map<String, dynamic>;
+                      final submitted = List<String>.from(data['submittedStudentUids'] ?? []);
+                      final isCompleted = submitted.contains(uid);
                       final title = data['title'] ?? 'Untitled Assignment';
                       final subject = data['subject'] ?? 'General';
                       final teacher = data['teacher'] ?? 'Faculty';
                       final dueDate = data['dueDate'] ?? 'Open';
-                      final score = data['score'];
+                      final resourceLink = (data['resourceLink'] ?? '').toString().trim();
                       final totalPoints = data['totalPoints'] ?? 100;
 
                       return Container(
@@ -152,18 +176,18 @@ class _AssignmentsTabState extends State<AssignmentsTab> {
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: isPending
-                                        ? const Color(0xFFFEF3C7)
-                                        : const Color(0xFFD1FAE5),
+                                    color: isCompleted
+                                        ? const Color(0xFFD1FAE5)
+                                        : const Color(0xFFFEF3C7),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Icon(
-                                    isPending
-                                        ? Icons.schedule_rounded
-                                        : Icons.check_circle_outline_rounded,
-                                    color: isPending
-                                        ? const Color(0xFFD97706)
-                                        : const Color(0xFF059669),
+                                    isCompleted
+                                        ? Icons.check_circle_outline_rounded
+                                        : Icons.schedule_rounded,
+                                    color: isCompleted
+                                        ? const Color(0xFF059669)
+                                        : const Color(0xFFD97706),
                                     size: 22,
                                   ),
                                 ),
@@ -182,7 +206,7 @@ class _AssignmentsTabState extends State<AssignmentsTab> {
                                       ),
                                       const SizedBox(height: 3),
                                       Text(
-                                        '$subject • $teacher',
+                                        '$subject • $teacher • $totalPoints pts',
                                         style: const TextStyle(
                                           fontSize: 12,
                                           color: Color(0xFF64748B),
@@ -193,6 +217,35 @@ class _AssignmentsTabState extends State<AssignmentsTab> {
                                 ),
                               ],
                             ),
+                            if (resourceLink.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              InkWell(
+                                onTap: () => _openResourceLink(context, resourceLink),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.attachment_rounded, size: 14, color: Color(0xFF1E40AF)),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Open Lecture Material / Worksheet Link',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF1E40AF),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 14),
                             const Divider(height: 1, color: Color(0xFFF1F5F9)),
                             const SizedBox(height: 12),
@@ -209,54 +262,74 @@ class _AssignmentsTabState extends State<AssignmentsTab> {
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w500,
-                                        color: isPending
-                                            ? const Color(0xFFE11D48)
-                                            : const Color(0xFF059669),
+                                        color: isCompleted
+                                            ? const Color(0xFF059669)
+                                            : const Color(0xFFE11D48),
                                       ),
                                     ),
                                   ],
                                 ),
-                                if (isPending)
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('File submission portal opened'),
-                                          behavior: SnackBarBehavior.floating,
-                                        ),
-                                      );
+                                if (!isCompleted)
+                                  ElevatedButton.icon(
+                                    icon: const Icon(Icons.done_all, size: 14),
+                                    label: const Text('Mark Done', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    onPressed: () async {
+                                      await FirebaseFirestore.instance.collection('assignments').doc(doc.id).update({
+                                        'submittedStudentUids': FieldValue.arrayUnion([uid]),
+                                      });
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Task marked as submitted!'),
+                                            backgroundColor: Color(0xFF059669),
+                                          ),
+                                        );
+                                      }
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppColors.primary,
                                       foregroundColor: Colors.white,
                                       elevation: 0,
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 8),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                                     ),
-                                    child: const Text('Submit Work',
-                                        style: TextStyle(fontSize: 12)),
                                   )
                                 else
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFECFDF5),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(
-                                          color: const Color(0xFFA7F3D0)),
-                                    ),
-                                    child: Text(
-                                      'Grade: ${score ?? 0}/$totalPoints',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF059669),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFECFDF5),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                                        ),
+                                        child: const Row(
+                                          children: [
+                                            Icon(Icons.check, size: 12, color: Color(0xFF059669)),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Completed',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF059669),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
+                                      const SizedBox(width: 6),
+                                      IconButton(
+                                        icon: const Icon(Icons.undo, size: 16, color: Colors.grey),
+                                        tooltip: 'Mark as incomplete',
+                                        onPressed: () async {
+                                          await FirebaseFirestore.instance.collection('assignments').doc(doc.id).update({
+                                            'submittedStudentUids': FieldValue.arrayRemove([uid]),
+                                          });
+                                        },
+                                      ),
+                                    ],
                                   ),
                               ],
                             ),

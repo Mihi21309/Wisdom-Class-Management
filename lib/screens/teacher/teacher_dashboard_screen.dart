@@ -268,8 +268,11 @@ class TeacherCreateClassTab extends StatefulWidget {
 class _TeacherCreateClassTabState extends State<TeacherCreateClassTab> {
   final _titleController = TextEditingController();
   final _linkController = TextEditingController(text: 'https://zoom.us/j/');
+  final _recordingController = TextEditingController();
   int _selectedDuration = 90;
   bool _isSaving = false;
+  DateTime _selectedDate = DateTime.now();
+  TimeOfDay _selectedTime = const TimeOfDay(hour: 9, minute: 0);
 
   String? _selectedBatchId;
   String _selectedBatchName = '';
@@ -290,21 +293,30 @@ class _TeacherCreateClassTabState extends State<TeacherCreateClassTab> {
     setState(() => _isSaving = true);
 
     try {
+      final dateStr = '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+      final timeStr = '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+      final scheduledDateTime = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _selectedTime.hour, _selectedTime.minute);
+
       final teacherService = TeacherService();
       await teacherService.createLiveClass(
         title: title,
         zoomLink: link,
+        recordingLink: _recordingController.text.trim(),
         durationMinutes: _selectedDuration,
         batchId: _selectedBatchId ?? 'general_batch',
         batchName: _selectedBatchName.isNotEmpty ? _selectedBatchName : 'All Enrolled Batches',
         subjectId: _selectedSubjectId ?? 'general_sub',
         subjectName: _selectedSubjectName.isNotEmpty ? _selectedSubjectName : 'Core Subject',
+        dateStr: dateStr,
+        timeStr: timeStr,
+        scheduledDateTime: scheduledDateTime,
       );
 
       _titleController.clear();
+      _recordingController.clear();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Class published to Firestore! Available to students immediately.')),
+          const SnackBar(content: Text('Class published to Firestore with scheduled date & time!')),
         );
       }
     } catch (e) {
@@ -437,6 +449,79 @@ class _TeacherCreateClassTabState extends State<TeacherCreateClassTab> {
             ),
             const SizedBox(height: 16),
 
+            const Text('Class Date & Time', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      backgroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.calendar_today, size: 16, color: Color(0xFF059669)),
+                    label: Text(
+                      '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                    ),
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedDate,
+                        firstDate: DateTime.now().subtract(const Duration(days: 7)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        setState(() => _selectedDate = picked);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      backgroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.access_time, size: 16, color: Color(0xFF059669)),
+                    label: Text(
+                      _selectedTime.format(context),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                    ),
+                    onPressed: () async {
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: _selectedTime,
+                      );
+                      if (picked != null) {
+                        setState(() => _selectedTime = picked);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            const Text('Class Recording / Replay Link (Optional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _recordingController,
+              decoration: InputDecoration(
+                hintText: 'e.g. https://youtube.com/... or Google Drive',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                prefixIcon: const Icon(Icons.play_circle_outline, color: Color(0xFF059669)),
+              ),
+            ),
+            const SizedBox(height: 16),
+
             const Text('Class Duration', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Row(
@@ -493,8 +578,10 @@ class TeacherMarkAttendanceTab extends StatefulWidget {
 
 class _TeacherMarkAttendanceTabState extends State<TeacherMarkAttendanceTab> {
   final Map<String, bool> _attendanceState = {};
+  String? _selectedClassDocId;
   String? _selectedSessionTitle;
-  final String _selectedBatchName = 'All Batches';
+  String? _selectedBatchName;
+  String? _selectedSubjectName;
 
   @override
   Widget build(BuildContext context) {
@@ -511,15 +598,25 @@ class _TeacherMarkAttendanceTabState extends State<TeacherMarkAttendanceTab> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final docs = snapshot.data?.docs ?? [];
-          if (docs.isEmpty) {
+          final allStudentDocs = snapshot.data?.docs ?? [];
+          if (allStudentDocs.isEmpty) {
             return const Center(
-              child: Text('No students found in Firestore to mark attendance for.', style: TextStyle(color: Colors.grey)),
+              child: Text('No students registered in Firestore yet.', style: TextStyle(color: Colors.grey)),
             );
           }
 
-          int presentCount = docs.where((d) => _attendanceState[d.id] ?? true).length;
-          int absentCount = docs.length - presentCount;
+          // Filter students by selected batch if a session is chosen
+          final filteredStudents = allStudentDocs.where((doc) {
+            if (_selectedBatchName == null || _selectedBatchName!.isEmpty || _selectedBatchName == 'All Batches') {
+              return true;
+            }
+            final data = doc.data() as Map<String, dynamic>;
+            final enrolled = List<String>.from(data['enrolledBatches'] ?? []);
+            return enrolled.contains(_selectedBatchName);
+          }).toList();
+
+          int presentCount = filteredStudents.where((d) => _attendanceState[d.id] ?? true).length;
+          int absentCount = filteredStudents.length - presentCount;
 
           return Column(
             children: [
@@ -528,6 +625,7 @@ class _TeacherMarkAttendanceTabState extends State<TeacherMarkAttendanceTab> {
                 padding: const EdgeInsets.all(16),
                 color: Colors.white,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Dynamic Class Session Stream from Firestore
                     StreamBuilder<QuerySnapshot>(
@@ -535,24 +633,35 @@ class _TeacherMarkAttendanceTabState extends State<TeacherMarkAttendanceTab> {
                       builder: (context, classSnap) {
                         final classDocs = classSnap.data?.docs ?? [];
                         return DropdownButtonFormField<String>(
-                          initialValue: _selectedSessionTitle,
+                          initialValue: _selectedClassDocId,
                           decoration: InputDecoration(
-                            labelText: 'Class Session for Attendance',
-                            hintText: classDocs.isEmpty ? 'Live Classroom Session' : 'Select session...',
+                            labelText: 'Select Class Session for Attendance *',
+                            hintText: classDocs.isEmpty ? 'No scheduled classes in database' : 'Choose class session...',
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           items: classDocs.map((cd) {
                             final cdata = cd.data() as Map<String, dynamic>;
                             final title = cdata['classTitle'] ?? 'Session ${cd.id}';
+                            final batch = cdata['batchName'] ?? '';
                             return DropdownMenuItem<String>(
-                              value: title,
-                              child: Text(title, overflow: TextOverflow.ellipsis),
+                              value: cd.id,
+                              child: Text(
+                                batch.isNotEmpty ? '$title ($batch)' : title,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             );
                           }).toList(),
                           onChanged: (val) {
                             if (val != null) {
-                              setState(() => _selectedSessionTitle = val);
+                              final match = classDocs.firstWhere((cd) => cd.id == val);
+                              final cdata = match.data() as Map<String, dynamic>;
+                              setState(() {
+                                _selectedClassDocId = val;
+                                _selectedSessionTitle = cdata['classTitle'] ?? 'Class Session';
+                                _selectedBatchName = cdata['batchName'] ?? 'All Batches';
+                                _selectedSubjectName = cdata['subjectName'] ?? 'General Subject';
+                              });
                             }
                           },
                         );
@@ -562,11 +671,16 @@ class _TeacherMarkAttendanceTabState extends State<TeacherMarkAttendanceTab> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Column(
+                        Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Live Student Roster', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                            Text('Firestore Synchronized', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                            const Text('Live Student Roster', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text(
+                              _selectedBatchName != null && _selectedBatchName != 'All Batches'
+                                  ? 'Batch: $_selectedBatchName (${filteredStudents.length} enrolled)'
+                                  : 'Showing all students (${filteredStudents.length})',
+                              style: const TextStyle(color: Color(0xFF059669), fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
                           ],
                         ),
                         Row(
@@ -592,59 +706,77 @@ class _TeacherMarkAttendanceTabState extends State<TeacherMarkAttendanceTab> {
                 ),
               ),
               Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: docs.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final data = docs[i].data() as Map<String, dynamic>;
-                    final docId = docs[i].id;
-                    final name = data['name'] ?? 'Student';
-                    final studentId = data['studentId'] ?? 'STU-000000';
-                    final isPresent = _attendanceState[docId] ?? true;
-
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
+                child: filteredStudents.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor: const Color(0xFF059669).withValues(alpha: 0.15),
-                                child: Text(name.isNotEmpty ? name[0] : 'S',
-                                    style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold)),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                  Text(studentId, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                                ],
+                              Icon(Icons.people_outline, size: 48, color: Colors.grey[400]),
+                              const SizedBox(height: 10),
+                              Text(
+                                'No students enrolled in "$_selectedBatchName" yet.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.grey),
                               ),
                             ],
                           ),
-                          Switch(
-                            value: isPresent,
-                            activeThumbColor: const Color(0xFF059669),
-                            onChanged: (val) {
-                              setState(() {
-                                _attendanceState[docId] = val;
-                              });
-                            },
-                          ),
-                        ],
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredStudents.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (context, i) {
+                          final data = filteredStudents[i].data() as Map<String, dynamic>;
+                          final docId = filteredStudents[i].id;
+                          final name = data['name'] ?? 'Student';
+                          final studentId = data['studentId'] ?? 'STU-000000';
+                          final isPresent = _attendanceState[docId] ?? true;
+
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 18,
+                                      backgroundColor: const Color(0xFF059669).withValues(alpha: 0.15),
+                                      child: Text(name.isNotEmpty ? name[0] : 'S',
+                                          style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold)),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                        Text(studentId, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                Switch(
+                                  value: isPresent,
+                                  activeThumbColor: const Color(0xFF059669),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _attendanceState[docId] = val;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
               ),
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -659,28 +791,36 @@ class _TeacherMarkAttendanceTabState extends State<TeacherMarkAttendanceTab> {
                     ),
                     icon: const Icon(Icons.check_circle_outline),
                     label: const Text('Save & Submit Attendance to Firestore'),
-                    onPressed: () async {
-                      final teacherService = TeacherService();
-                      final sessionTitle = _selectedSessionTitle ?? 'Live Lecture Session';
+                    onPressed: filteredStudents.isEmpty
+                        ? null
+                        : () async {
+                            final teacherService = TeacherService();
+                            final sessionTitle = _selectedSessionTitle ?? 'Live Lecture Session';
+                            final classId = _selectedClassDocId ?? sessionTitle;
+                            final batchName = _selectedBatchName ?? 'All Batches';
+                            final subjectName = _selectedSubjectName ?? 'General Subject';
 
-                      for (final doc in docs) {
-                        final isPresent = _attendanceState[doc.id] ?? true;
-                        await teacherService.markAttendance(
-                          classId: sessionTitle,
-                          studentUid: doc.id,
-                          batchId: 'batch_active',
-                          batchName: _selectedBatchName,
-                          subjectId: 'sub_active',
-                          subjectName: 'Active Subject',
-                          status: isPresent ? 'present' : 'absent',
-                        );
-                      }
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Attendance records saved to Firestore attendance collection!')),
-                        );
-                      }
-                    },
+                            for (final doc in filteredStudents) {
+                              final isPresent = _attendanceState[doc.id] ?? true;
+                              await teacherService.markAttendance(
+                                classId: classId,
+                                studentUid: doc.id,
+                                batchId: batchName,
+                                batchName: batchName,
+                                subjectId: subjectName,
+                                subjectName: subjectName,
+                                status: isPresent ? 'present' : 'absent',
+                              );
+                            }
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Attendance records saved for this class session!'),
+                                  backgroundColor: Color(0xFF059669),
+                                ),
+                              );
+                            }
+                          },
                   ),
                 ),
               ),
@@ -704,6 +844,7 @@ class TeacherMaterialsAndAssignmentsTab extends StatelessWidget {
     final teacherCtrl = TextEditingController(text: 'Faculty Educator');
     final dueCtrl = TextEditingController(text: 'Next Monday');
     final pointsCtrl = TextEditingController(text: '100');
+    final resourceLinkCtrl = TextEditingController();
 
     showDialog(
       context: context,
@@ -739,6 +880,14 @@ class TeacherMaterialsAndAssignmentsTab extends StatelessWidget {
               TextField(controller: dueCtrl, decoration: const InputDecoration(labelText: 'Due Date *', hintText: 'e.g. Friday, 5 PM')),
               const SizedBox(height: 8),
               TextField(controller: pointsCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Points')),
+              const SizedBox(height: 8),
+              TextField(
+                controller: resourceLinkCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Worksheet / Material Link (Optional)',
+                  hintText: 'https://drive.google.com/... or PDF link',
+                ),
+              ),
             ],
           ),
         ),
@@ -754,7 +903,8 @@ class TeacherMaterialsAndAssignmentsTab extends StatelessWidget {
                 'subject': subjectCtrl.text.trim(),
                 'teacher': teacherCtrl.text.trim(),
                 'dueDate': dueCtrl.text.trim(),
-                'isPending': true,
+                'resourceLink': resourceLinkCtrl.text.trim(),
+                'submittedStudentUids': <String>[],
                 'totalPoints': int.tryParse(pointsCtrl.text.trim()) ?? 100,
                 'createdAt': FieldValue.serverTimestamp(),
               });

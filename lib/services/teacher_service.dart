@@ -79,6 +79,10 @@ class TeacherService {
     required String batchName,
     required String subjectId,
     required String subjectName,
+    String? dateStr,
+    String? timeStr,
+    DateTime? scheduledDateTime,
+    String? recordingLink,
   }) async {
     final currentTeacher = _auth.currentUser;
     String teacherName = 'Faculty Educator';
@@ -92,8 +96,9 @@ class TeacherService {
     }
 
     final now = DateTime.now();
-    final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final effectiveDate = dateStr ?? '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final effectiveTime = timeStr ?? '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final effectiveScheduled = (scheduledDateTime ?? now).toIso8601String();
 
     await _firestore.collection('classes').add({
       'classTitle': title,
@@ -104,9 +109,10 @@ class TeacherService {
       'teacherId': currentTeacher?.uid ?? '',
       'teacherName': teacherName,
       'zoomLink': zoomLink,
-      'date': dateStr,
-      'time': timeStr,
-      'scheduledDateTime': now.toIso8601String(),
+      'recordingLink': recordingLink ?? '',
+      'date': effectiveDate,
+      'time': effectiveTime,
+      'scheduledDateTime': effectiveScheduled,
       'durationMinutes': durationMinutes,
       'createdAt': now.toIso8601String(),
     });

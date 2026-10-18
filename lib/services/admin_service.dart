@@ -113,6 +113,8 @@ class AdminService {
       'enrolledBatches': [batchName],
       'enrolledSubjects': [],
       'mustChangePassword': true,
+      'feeStatus': 'Paid',
+      'feeMonth': 'October 2026',
       'createdAt': FieldValue.serverTimestamp(),
     });
 
@@ -123,7 +125,21 @@ class AdminService {
       'email': email,
       'password': password,
       'batch': batchName,
+      'feeStatus': 'Paid',
     };
+  }
+
+  /// Update / toggle student monthly fee payment status
+  Future<void> updateStudentFeeStatus({
+    required String studentDocId,
+    required String feeStatus,
+    String? feeMonth,
+  }) async {
+    await _firestore.collection('students').doc(studentDocId).update({
+      'feeStatus': feeStatus,
+      'feeMonth': feeMonth ?? 'October 2026',
+      'feeUpdatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   /// Register teacher with credentials and create Auth account
