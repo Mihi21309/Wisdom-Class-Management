@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../services/teacher_service.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
@@ -63,7 +66,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// TEACHER TAB 1: SCHEDULE & ZOOM LAUNCH
+// TEACHER TAB 1: SCHEDULE & ZOOM LAUNCH (LIVE FIRESTORE)
 // ─────────────────────────────────────────────────────────────
 class TeacherScheduleTab extends StatelessWidget {
   const TeacherScheduleTab({super.key});
@@ -83,6 +86,8 @@ class TeacherScheduleTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -100,85 +105,134 @@ class TeacherScheduleTab extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Teacher Banner
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF047857), Color(0xFF10B981)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
-                    child: const Icon(Icons.school, size: 34, color: Colors.white),
-                  ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Welcome, Educator', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                        Text('Mr. K. Perera', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                        Text('Combined Mathematics • Batch 2026', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
+            // Live Teacher Profile Banner from Firestore
+            StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance.collection('teachers').doc(currentUid).snapshots(),
+              builder: (context, snapshot) {
+                final data = snapshot.data?.data() as Map<String, dynamic>?;
+                final name = data?['name'] ?? 'Faculty Educator';
+                final teacherId = data?['teacherId'] ?? 'TCH-0001';
 
-            // Live / Scheduled Sessions
-            const Text("Today's Live Classes", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF047857), Color(0xFF10B981)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
                     children: [
-                      const Text('Combined Maths: Differential Calculus', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD1FAE5),
-                          borderRadius: BorderRadius.circular(6),
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                        child: const Icon(Icons.school, size: 34, color: Colors.white),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Welcome, Educator', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                            Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                            Text('Teacher ID: $teacherId • Online Active', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          ],
                         ),
-                        child: const Text('LIVE NOW', style: TextStyle(color: Color(0xFF059669), fontSize: 10, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  const Text('10:00 AM - 12:00 PM • 28 Students Enrolled', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF059669),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      icon: const Icon(Icons.video_call, size: 18),
-                      label: const Text('Start / Host Zoom Class'),
-                      onPressed: () => _launchZoom(context, 'https://zoom.us/j/1234567890'),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+
+            // Live Classes Stream from Firestore
+            const Text('Live & Scheduled Sessions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('classes').snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final docs = snapshot.data?.docs ?? [];
+                if (docs.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                ],
-              ),
+                    child: const Center(
+                      child: Text('No live classes scheduled in Firestore yet.', style: TextStyle(color: Colors.grey)),
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: docs.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, i) {
+                    final c = docs[i].data() as Map<String, dynamic>;
+                    final title = c['classTitle'] ?? 'Live Class';
+                    final zoomLink = c['zoomLink'] ?? '';
+                    final duration = c['durationMinutes'] ?? 60;
+
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFD1FAE5),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text('READY',
+                                    style: TextStyle(color: Color(0xFF059669), fontSize: 10, fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text('Duration: $duration mins',
+                              style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF059669),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              icon: const Icon(Icons.video_call, size: 18),
+                              label: const Text('Start / Host Zoom Class'),
+                              onPressed: () => _launchZoom(context, zoomLink),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ],
         ),
@@ -188,7 +242,7 @@ class TeacherScheduleTab extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// TEACHER TAB 2: CREATE NEW CLASS (PROPOSAL SCREEN 13)
+// TEACHER TAB 2: CREATE LIVE CLASS (SAVES TO FIRESTORE)
 // ─────────────────────────────────────────────────────────────
 class TeacherCreateClassTab extends StatefulWidget {
   const TeacherCreateClassTab({super.key});
@@ -201,6 +255,49 @@ class _TeacherCreateClassTabState extends State<TeacherCreateClassTab> {
   final _titleController = TextEditingController();
   final _linkController = TextEditingController(text: 'https://zoom.us/j/');
   int _selectedDuration = 90;
+  bool _isSaving = false;
+
+  Future<void> _publishClass() async {
+    final title = _titleController.text.trim();
+    final link = _linkController.text.trim();
+
+    if (title.isEmpty || link.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter class title and Zoom link')),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      final teacherService = TeacherService();
+      await teacherService.createLiveClass(
+        title: title,
+        zoomLink: link,
+        durationMinutes: _selectedDuration,
+        batchId: 'batch_2026_al',
+        subjectId: 'sub_maths',
+      );
+
+      _titleController.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Class published to Firestore! Students can now see it.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to publish class: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -220,10 +317,10 @@ class _TeacherCreateClassTabState extends State<TeacherCreateClassTab> {
             TextField(
               controller: _titleController,
               decoration: InputDecoration(
-                hintText: 'e.g. Physics Wave Mechanics Revision',
+                hintText: 'e.g. Combined Maths Integration Session',
                 filled: true,
                 fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
             const SizedBox(height: 16),
@@ -271,13 +368,11 @@ class _TeacherCreateClassTabState extends State<TeacherCreateClassTab> {
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                icon: const Icon(Icons.check),
-                label: const Text('Publish & Notify Students'),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Live class successfully scheduled and notified!')),
-                  );
-                },
+                icon: _isSaving
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Icon(Icons.cloud_upload_outlined),
+                label: Text(_isSaving ? 'Saving to Firestore...' : 'Publish to Firestore'),
+                onPressed: _isSaving ? null : _publishClass,
               ),
             ),
           ],
@@ -288,7 +383,7 @@ class _TeacherCreateClassTabState extends State<TeacherCreateClassTab> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// TEACHER TAB 3: MARK ATTENDANCE (PROPOSAL SCREEN 16)
+// TEACHER TAB 3: MARK ATTENDANCE (LIVE FIRESTORE STUDENTS)
 // ─────────────────────────────────────────────────────────────
 class TeacherMarkAttendanceTab extends StatefulWidget {
   const TeacherMarkAttendanceTab({super.key});
@@ -298,136 +393,167 @@ class TeacherMarkAttendanceTab extends StatefulWidget {
 }
 
 class _TeacherMarkAttendanceTabState extends State<TeacherMarkAttendanceTab> {
-  final List<Map<String, dynamic>> _students = [
-    {'name': 'Kasun Mendis', 'id': 'STU-000001', 'present': true},
-    {'name': 'Asel Sewwandi', 'id': 'STU-000002', 'present': true},
-    {'name': 'Dinuka Kumara', 'id': 'STU-000003', 'present': false},
-    {'name': 'Nadeesha Dilhani', 'id': 'STU-000004', 'present': true},
-    {'name': 'Sanjaya Rathnayake', 'id': 'STU-000005', 'present': true},
-  ];
+  final Map<String, bool> _attendanceState = {};
 
   @override
   Widget build(BuildContext context) {
-    int presentCount = _students.where((s) => s['present'] == true).length;
-    int absentCount = _students.length - presentCount;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Mark Class Attendance'),
         backgroundColor: const Color(0xFF059669),
       ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.white,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('students').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final docs = snapshot.data?.docs ?? [];
+          if (docs.isEmpty) {
+            return const Center(
+              child: Text('No students found in Firestore to mark attendance for.', style: TextStyle(color: Colors.grey)),
+            );
+          }
+
+          int presentCount = docs.where((d) => _attendanceState[d.id] ?? true).length;
+          int absentCount = docs.length - presentCount;
+
+          return Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                color: Colors.white,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Combined Maths Theory', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    Text('Batch 2026 • Today Session', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Live Student Roster', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        Text('Firestore Synchronized', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: const Color(0xFFD1FAE5), borderRadius: BorderRadius.circular(6)),
+                          child: Text('Present: $presentCount',
+                              style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold, fontSize: 11)),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(6)),
+                          child: Text('Absent: $absentCount',
+                              style: const TextStyle(color: Color(0xFFDC2626), fontWeight: FontWeight.bold, fontSize: 11)),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: const Color(0xFFD1FAE5), borderRadius: BorderRadius.circular(6)),
-                      child: Text('Present: $presentCount', style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold, fontSize: 11)),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(6)),
-                      child: Text('Absent: $absentCount', style: const TextStyle(color: Color(0xFFDC2626), fontWeight: FontWeight.bold, fontSize: 11)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: _students.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (context, i) {
-                final s = _students[i];
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
+              ),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: docs.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) {
+                    final data = docs[i].data() as Map<String, dynamic>;
+                    final docId = docs[i].id;
+                    final name = data['name'] ?? 'Student';
+                    final studentId = data['studentId'] ?? 'STU-000000';
+                    final isPresent = _attendanceState[docId] ?? true;
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor: const Color(0xFF059669).withValues(alpha: 0.15),
-                            child: Text(s['name'][0], style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold)),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          Row(
                             children: [
-                              Text(s['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              Text(s['id'], style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: const Color(0xFF059669).withValues(alpha: 0.15),
+                                child: Text(name.isNotEmpty ? name[0] : 'S',
+                                    style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold)),
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                  Text(studentId, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                ],
+                              ),
                             ],
+                          ),
+                          Switch(
+                            value: isPresent,
+                            activeColor: const Color(0xFF059669),
+                            onChanged: (val) {
+                              setState(() {
+                                _attendanceState[docId] = val;
+                              });
+                            },
                           ),
                         ],
                       ),
-                      Switch(
-                        value: s['present'] as bool,
-                        activeColor: const Color(0xFF059669),
-                        onChanged: (val) {
-                          setState(() {
-                            s['present'] = val;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF059669),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    );
+                  },
                 ),
-                icon: const Icon(Icons.check_circle_outline),
-                label: const Text('Save & Submit Attendance'),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Attendance records saved to Firestore!')),
-                  );
-                },
               ),
-            ),
-          ),
-        ],
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF059669),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text('Save & Submit Attendance to Firestore'),
+                    onPressed: () async {
+                      final teacherService = TeacherService();
+                      for (final doc in docs) {
+                        final isPresent = _attendanceState[doc.id] ?? true;
+                        await teacherService.markAttendance(
+                          classId: 'live_session',
+                          studentUid: doc.id,
+                          batchId: 'batch_2026_al',
+                          subjectId: 'sub_maths',
+                          status: isPresent ? 'present' : 'absent',
+                        );
+                      }
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Attendance records saved to Firestore attendance collection!')),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// TEACHER TAB 4: TASKS & MATERIALS (PROPOSAL SCREEN 14 & 15)
+// TEACHER TAB 4: TASKS & MATERIALS (FIRESTORE ASSIGNMENT CREATOR)
 // ─────────────────────────────────────────────────────────────
 class TeacherMaterialsAndAssignmentsTab extends StatelessWidget {
   const TeacherMaterialsAndAssignmentsTab({super.key});
@@ -457,14 +583,25 @@ class TeacherMaterialsAndAssignmentsTab extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _buildActionCard(
-              title: 'Create & Assign Homework',
-              subtitle: 'Publish assignments, set deadlines, and collect student submissions',
+              title: 'Create & Assign Homework (Firestore)',
+              subtitle: 'Publish assignments directly to Firestore for students to see live',
               icon: Icons.post_add,
               color: const Color(0xFFD97706),
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Assignment publisher opened')),
-                );
+              onTap: () async {
+                await FirebaseFirestore.instance.collection('assignments').add({
+                  'title': 'Applied Mathematics Problem Set',
+                  'subject': 'Combined Mathematics',
+                  'teacher': 'Mr. K. Perera',
+                  'dueDate': 'Next Week',
+                  'isPending': true,
+                  'totalPoints': 100,
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('New assignment added to Firestore! Check Student tab.')),
+                  );
+                }
               },
             ),
           ],
@@ -512,7 +649,7 @@ class TeacherMaterialsAndAssignmentsTab extends StatelessWidget {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white),
               onPressed: onTap,
-              child: const Text('Open Tool', style: TextStyle(fontSize: 12)),
+              child: const Text('Add via Firestore', style: TextStyle(fontSize: 12)),
             ),
           ),
         ],

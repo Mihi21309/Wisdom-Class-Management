@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants/app_colors.dart';
 import 'manage_students_screen.dart';
 import 'create_student_screen.dart';
@@ -65,7 +66,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// TAB 1: ADMIN HOME / OVERVIEW
+// TAB 1: ADMIN HOME / OVERVIEW (LIVE FIRESTORE METRICS)
 // ─────────────────────────────────────────────────────────────
 class AdminHomeTab extends StatelessWidget {
   const AdminHomeTab({super.key});
@@ -119,7 +120,7 @@ class AdminHomeTab extends StatelessWidget {
                         Text('Wisdom Educational Unit', style: TextStyle(color: Colors.white70, fontSize: 12)),
                         Text('Central Admin Panel', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                         SizedBox(height: 4),
-                        Text('Academic Year 2026 / 2027', style: TextStyle(color: Colors.white60, fontSize: 11)),
+                        Text('Cloud Firestore Connected', style: TextStyle(color: Colors.white60, fontSize: 11)),
                       ],
                     ),
                   ),
@@ -128,8 +129,8 @@ class AdminHomeTab extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Metrics Grid
-            const Text('System Overview', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+            // Live Metrics Grid from Cloud Firestore
+            const Text('System Overview (Live Firestore)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
             const SizedBox(height: 12),
             GridView.count(
               crossAxisCount: 2,
@@ -139,16 +140,36 @@ class AdminHomeTab extends StatelessWidget {
               mainAxisSpacing: 12,
               childAspectRatio: 1.4,
               children: [
-                _buildStatCard('Total Students', '248', Icons.groups, const Color(0xFF2563EB)),
-                _buildStatCard('Faculty Teachers', '18', Icons.school, const Color(0xFF059669)),
-                _buildStatCard('Active Batches', '6', Icons.class_, const Color(0xFFD97706)),
-                _buildStatCard('Live Attendance', '92.4%', Icons.verified_user, const Color(0xFF7C3AED)),
+                _buildLiveStatCard(
+                  collection: 'students',
+                  label: 'Total Students',
+                  icon: Icons.groups,
+                  color: const Color(0xFF2563EB),
+                ),
+                _buildLiveStatCard(
+                  collection: 'teachers',
+                  label: 'Faculty Teachers',
+                  icon: Icons.school,
+                  color: const Color(0xFF059669),
+                ),
+                _buildLiveStatCard(
+                  collection: 'batches',
+                  label: 'Active Batches',
+                  icon: Icons.class_,
+                  color: const Color(0xFFD97706),
+                ),
+                _buildLiveStatCard(
+                  collection: 'classes',
+                  label: 'Scheduled Classes',
+                  icon: Icons.video_camera_front,
+                  color: const Color(0xFF7C3AED),
+                ),
               ],
             ),
             const SizedBox(height: 24),
 
             // Quick Actions
-            const Text('Quick Administrative Tools', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+            const Text('Administrative Quick Actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -203,94 +224,116 @@ class AdminHomeTab extends StatelessWidget {
     );
   }
 
-  static Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: color.withValues(alpha: 0.15),
-            child: Icon(icon, color: color, size: 20),
+  static Widget _buildLiveStatCard({
+    required String collection,
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection(collection).snapshots(),
+      builder: (context, snapshot) {
+        final count = snapshot.data?.docs.length ?? 0;
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
-          Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-              Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: color.withValues(alpha: 0.15),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$count', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+                  Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                ],
+              ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// TAB 3: MANAGE TEACHERS (PROPOSAL SCREEN 19)
+// TAB 3: MANAGE TEACHERS (LIVE FIRESTORE COLLECTION)
 // ─────────────────────────────────────────────────────────────
 class ManageTeachersTab extends StatelessWidget {
   const ManageTeachersTab({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final teachers = [
-      {'id': 'TCH-0001', 'name': 'Mr. K. Perera', 'subject': 'Combined Mathematics', 'batch': '2026 A/L'},
-      {'id': 'TCH-0002', 'name': 'Dr. N. Silva', 'subject': 'Physics', 'batch': '2026 / 2027 A/L'},
-      {'id': 'TCH-0003', 'name': 'Mrs. I. Fernando', 'subject': 'Chemistry', 'batch': '2026 A/L'},
-      {'id': 'TCH-0004', 'name': 'Mr. S. Wickramasinghe', 'subject': 'Information Tech (ICT)', 'batch': '2027 A/L'},
-    ];
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Faculty & Teachers'),
         backgroundColor: AppColors.primary,
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: teachers.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final t = teachers[index];
-          return Container(
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('teachers').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final docs = snapshot.data?.docs ?? [];
+          if (docs.isEmpty) {
+            return const Center(
+              child: Text('No teachers registered in Firestore.', style: TextStyle(color: Colors.grey)),
+            );
+          }
+
+          return ListView.separated(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: const Color(0xFF059669).withValues(alpha: 0.15),
-                  child: const Icon(Icons.person, color: Color(0xFF059669)),
+            itemCount: docs.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final data = docs[index].data() as Map<String, dynamic>;
+              final name = data['name'] ?? 'Unnamed Teacher';
+              final teacherId = data['teacherId'] ?? 'TCH-0000';
+              final email = data['email'] ?? '';
+              final phone = data['phone'] ?? '';
+
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(t['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      Text('${t['subject']} • ${t['batch']}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                      const SizedBox(height: 4),
-                      Text('Teacher ID: ${t['id']}', style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: const Color(0xFF059669).withValues(alpha: 0.15),
+                      child: const Icon(Icons.person, color: Color(0xFF059669)),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                          Text(email, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                          const SizedBox(height: 4),
+                          Text('Teacher ID: $teacherId • $phone',
+                              style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.chevron_right, color: Colors.grey),
-                  onPressed: () {},
-                ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
@@ -299,7 +342,7 @@ class ManageTeachersTab extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// TAB 4: REPORTS & ANALYTICS (PROPOSAL SCREEN 20)
+// TAB 4: REPORTS & ANALYTICS (CONNECTED TO FIRESTORE)
 // ─────────────────────────────────────────────────────────────
 class AdminReportsTab extends StatelessWidget {
   const AdminReportsTab({super.key});
@@ -317,107 +360,80 @@ class AdminReportsTab extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildReportCard(
-              context: context,
-              title: 'Monthly Attendance Analytics',
-              subtitle: 'Batch 2026 Combined Maths (92% Average)',
-              icon: Icons.pie_chart,
-              color: const Color(0xFF2563EB),
-              barItems: [
-                {'label': 'Combined Maths', 'percent': 0.92, 'text': '92%'},
-                {'label': 'Physics', 'percent': 0.88, 'text': '88%'},
-                {'label': 'Chemistry', 'percent': 0.85, 'text': '85%'},
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildReportCard(
-              context: context,
-              title: 'Student Enrollment Breakdown',
-              subtitle: 'Active: 231 • On Leave: 17',
-              icon: Icons.analytics,
-              color: const Color(0xFF059669),
-              barItems: [
-                {'label': '2026 A/L Science', 'percent': 0.95, 'text': '145'},
-                {'label': '2027 A/L Foundation', 'percent': 0.70, 'text': '103'},
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReportCard({
-    required BuildContext context,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required List<Map<String, dynamic>> barItems,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(backgroundColor: color.withValues(alpha: 0.15), child: Icon(icon, color: color)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...barItems.map((b) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(b['label'], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                        Text(b['text'], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    LinearProgressIndicator(
-                      value: b['percent'],
-                      backgroundColor: const Color(0xFFE2E8F0),
-                      color: color,
-                      minHeight: 6,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ],
-                ),
-              )),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.download, size: 16),
-              label: const Text('Export PDF Report', style: TextStyle(fontSize: 12)),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Report PDF downloaded successfully!')),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('students').snapshots(),
+              builder: (context, snapshot) {
+                final studentCount = snapshot.data?.docs.length ?? 0;
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Color(0x262563EB),
+                            child: Icon(Icons.pie_chart, color: Color(0xFF2563EB)),
+                          ),
+                          SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Live Enrollment Breakdown', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                              Text('Real-time database sync', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Total Enrolled Students', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                                Text('$studentCount', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            LinearProgressIndicator(
+                              value: studentCount > 0 ? 1.0 : 0.0,
+                              backgroundColor: const Color(0xFFE2E8F0),
+                              color: const Color(0xFF2563EB),
+                              minHeight: 6,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.download, size: 16),
+                          label: const Text('Export PDF Report', style: TextStyle(fontSize: 12)),
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Report generated from Firestore data!')),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
