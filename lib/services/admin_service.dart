@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'student_service.dart';
@@ -60,6 +61,99 @@ class AdminService {
       8,
       (index) => chars[random.nextInt(chars.length)],
     ).join();
+  }
+
+  /// Helper to create a Firebase Auth user without signing out the current admin
+  Future<String> _createAuthUserIsolated({
+    required String email,
+    required String password,
+  }) async {
+    final String tempAppName = 'AuthAdmin_${DateTime.now().millisecondsSinceEpoch}';
+    FirebaseApp? tempApp;
+    try {
+      tempApp = await Firebase.initializeApp(
+        name: tempAppName,
+        options: Firebase.app().options,
+      );
+      final cred = await FirebaseAuth.instanceFor(app: tempApp)
+          .createUserWithEmailAndPassword(email: email, password: password);
+      return cred.user!.uid;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        throw Exception('The email "$email" is already registered in Firebase Authentication.');
+      } else if (e.code == 'weak-password') {
+        throw Exception('Password must be at least 6 characters.');
+      } else if (e.code == 'invalid-email') {
+        throw Exception('The email address format is invalid.');
+      }
+      throw Exception(e.message ?? 'Authentication error');
+    } finally {
+      if (tempApp != null) {
+        await tempApp.delete();
+      }
+    }
+  }
+
+  /// Register student with credentials and create Auth account
+  Future<Map<String, String>> registerStudent({
+    required String name,
+    required String email,
+    required String phone,
+    required String studentId,
+    required String batchName,
+    required String password,
+  }) async {
+    final uid = await _createAuthUserIsolated(email: email, password: password);
+
+    await _firestore.collection('students').doc(uid).set({
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'studentId': studentId,
+      'enrolledBatches': [batchName],
+      'enrolledSubjects': [],
+      'mustChangePassword': true,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    return {
+      'role': 'Student',
+      'name': name,
+      'id': studentId,
+      'email': email,
+      'password': password,
+      'batch': batchName,
+    };
+  }
+
+  /// Register teacher with credentials and create Auth account
+  Future<Map<String, String>> registerTeacher({
+    required String name,
+    required String email,
+    required String phone,
+    required String teacherId,
+    required String subject,
+    required String password,
+  }) async {
+    final uid = await _createAuthUserIsolated(email: email, password: password);
+
+    await _firestore.collection('teachers').doc(uid).set({
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'teacherId': teacherId,
+      'subject': subject,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    return {
+      'role': 'Teacher',
+      'name': name,
+      'id': teacherId,
+      'email': email,
+      'password': password,
+      'subject': subject,
+    };
   }
 
   /// Create a new student account with auto-generated ID and temp password

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
+import '../../services/admin_service.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -312,6 +314,158 @@ class AdminHomeTab extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
+// CREDENTIALS POPUP HELPER FOR ADMIN
+// ─────────────────────────────────────────────────────────────
+void _showCredentialsGeneratedDialog(BuildContext context, Map<String, String> creds) {
+  final role = creds['role'] ?? 'User';
+  final name = creds['name'] ?? '';
+  final id = creds['id'] ?? '';
+  final email = creds['email'] ?? '';
+  final password = creds['password'] ?? '';
+  final extra = creds['batch'] ?? creds['subject'] ?? '';
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFDCFCE7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 36),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '$role Credentials Ready!',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Copy or save these credentials to share with the user for their first login.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                children: [
+                  _buildCredentialRow('Full Name', name),
+                  const Divider(height: 16),
+                  _buildCredentialRow('$role ID', id, isCopyable: true, context: ctx),
+                  const Divider(height: 16),
+                  _buildCredentialRow('Email Address', email, isCopyable: true, context: ctx),
+                  const Divider(height: 16),
+                  _buildCredentialRow('Temporary Password', password, isCopyable: true, isHighlight: true, context: ctx),
+                  if (extra.isNotEmpty) ...[
+                    const Divider(height: 16),
+                    _buildCredentialRow(creds['batch'] != null ? 'Assigned Batch' : 'Primary Subject', extra),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.copy_rounded, size: 18),
+              label: const Text('Copy All Credentials'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                final summary = StringBuffer();
+                summary.writeln('🎓 Wisdom Class Management - Login Credentials');
+                summary.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                summary.writeln('Role: $role');
+                summary.writeln('Name: $name');
+                summary.writeln('$role ID: $id');
+                summary.writeln('Email: $email');
+                summary.writeln('Temporary Password: $password');
+                if (extra.isNotEmpty) {
+                  summary.writeln(creds['batch'] != null ? 'Batch: $extra' : 'Subject: $extra');
+                }
+                summary.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                summary.writeln('👉 Log in to Wisdom Class Management using either your $role ID or Email, along with this password.');
+
+                Clipboard.setData(ClipboardData(text: summary.toString()));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Credentials copied! Ready to paste into WhatsApp / SMS.'),
+                    backgroundColor: Color(0xFF16A34A),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Done', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildCredentialRow(String label, String value, {bool isCopyable = false, bool isHighlight = false, BuildContext? context}) {
+  return Row(
+    children: [
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500)),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: isHighlight ? const Color(0xFF1E40AF) : const Color(0xFF1E293B),
+              ),
+            ),
+          ],
+        ),
+      ),
+      if (isCopyable && context != null)
+        IconButton(
+          icon: const Icon(Icons.copy_rounded, size: 16, color: Color(0xFF64748B)),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          tooltip: 'Copy $label',
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: value));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Copied $label: $value'), duration: const Duration(seconds: 1)),
+            );
+          },
+        ),
+    ],
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 // TAB 2: STUDENT MANAGEMENT (FULL CRUD)
 // ─────────────────────────────────────────────────────────────
 class AdminManageStudentsTab extends StatefulWidget {
@@ -332,10 +486,13 @@ class _AdminManageStudentsTabState extends State<AdminManageStudentsTab> {
     final studentIdCtrl = TextEditingController(
       text: 'STU-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
     );
+    final passwordCtrl = TextEditingController(text: 'Wisdom@${DateTime.now().year}');
     String? selectedBatch;
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
+      barrierDismissible: !isSubmitting,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) => AlertDialog(
           title: const Row(
@@ -369,6 +526,15 @@ class _AdminManageStudentsTabState extends State<AdminManageStudentsTab> {
                 TextField(
                   controller: studentIdCtrl,
                   decoration: const InputDecoration(labelText: 'Student ID *', hintText: 'STU-000000'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: passwordCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Initial Password *',
+                    hintText: 'e.g. Wisdom@2026',
+                    helperText: 'Temporary login password for the student',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 StreamBuilder<QuerySnapshot>(
@@ -404,33 +570,64 @@ class _AdminManageStudentsTabState extends State<AdminManageStudentsTab> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-              onPressed: () async {
-                if (nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Name and Email are required.')),
-                  );
-                  return;
-                }
-                Navigator.pop(ctx);
-                await FirebaseFirestore.instance.collection('students').add({
-                  'name': nameCtrl.text.trim(),
-                  'email': emailCtrl.text.trim(),
-                  'phone': phoneCtrl.text.trim(),
-                  'studentId': studentIdCtrl.text.trim(),
-                  'enrolledBatches': [selectedBatch ?? 'General Batch'],
-                  'enrolledSubjects': [],
-                  'createdAt': FieldValue.serverTimestamp(),
-                });
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Student added to Firestore!')),
-                  );
-                }
-              },
-              child: const Text('Create Student'),
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      if (nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Name and Email are required.')),
+                        );
+                        return;
+                      }
+                      if (passwordCtrl.text.trim().length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Password must be at least 6 characters.')),
+                        );
+                        return;
+                      }
+
+                      setModalState(() => isSubmitting = true);
+
+                      try {
+                        final creds = await AdminService().registerStudent(
+                          name: nameCtrl.text.trim(),
+                          email: emailCtrl.text.trim(),
+                          phone: phoneCtrl.text.trim(),
+                          studentId: studentIdCtrl.text.trim(),
+                          batchName: selectedBatch ?? 'General Batch',
+                          password: passwordCtrl.text.trim(),
+                        );
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                        }
+                        if (context.mounted) {
+                          _showCredentialsGeneratedDialog(context, creds);
+                        }
+                      } catch (e) {
+                        setModalState(() => isSubmitting = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(e.toString().replaceAll('Exception: ', '')),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Text('Create Student'),
             ),
           ],
         ),
@@ -696,95 +893,141 @@ class _AdminManageTeachersTabState extends State<AdminManageTeachersTab> {
     final teacherIdCtrl = TextEditingController(
       text: 'TCH-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
     );
+    final passwordCtrl = TextEditingController(text: 'Wisdom@${DateTime.now().year}');
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.school, color: Color(0xFF059669)),
-            SizedBox(width: 8),
-            Text('Register Faculty Teacher', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+      barrierDismissible: !isSubmitting,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          title: const Row(
             children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Teacher Name *', hintText: 'e.g. Dr. K. Perera'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email Address *', hintText: 'perera@wisdom.com'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: phoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Phone Contact *', hintText: '0779876543'),
-              ),
-              const SizedBox(height: 12),
-              StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('subjects').snapshots(),
-                builder: (context, snapshot) {
-                  final docs = snapshot.data?.docs ?? [];
-                  if (docs.isEmpty) {
-                    return const Text('No subjects in database yet. Add subjects in database.', style: TextStyle(color: Colors.grey, fontSize: 12));
-                  }
-                  return DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(labelText: 'Select Primary Subject *'),
-                    items: docs.map((d) {
-                      final sdata = d.data() as Map<String, dynamic>;
-                      final sname = sdata['name'] ?? d.id;
-                      return DropdownMenuItem<String>(value: sname, child: Text(sname));
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) subjectCtrl.text = val;
-                    },
-                  );
-                },
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: teacherIdCtrl,
-                decoration: const InputDecoration(labelText: 'Teacher ID *', hintText: 'TCH-0001'),
-              ),
+              Icon(Icons.school, color: Color(0xFF059669)),
+              SizedBox(width: 8),
+              Text('Register Faculty Teacher', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ],
           ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
-            onPressed: () async {
-              if (nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Name and Email are required.')),
-                );
-                return;
-              }
-              Navigator.pop(ctx);
-              await FirebaseFirestore.instance.collection('teachers').add({
-                'name': nameCtrl.text.trim(),
-                'email': emailCtrl.text.trim(),
-                'phone': phoneCtrl.text.trim(),
-                'subject': subjectCtrl.text.trim(),
-                'teacherId': teacherIdCtrl.text.trim(),
-                'createdAt': FieldValue.serverTimestamp(),
-              });
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Teacher registered in Firestore!')),
-                );
-              }
-            },
-            child: const Text('Create Teacher'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Teacher Name *', hintText: 'e.g. Dr. K. Perera'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: 'Email Address *', hintText: 'perera@wisdom.com'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(labelText: 'Phone Contact *', hintText: '0779876543'),
+                ),
+                const SizedBox(height: 12),
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('subjects').snapshots(),
+                  builder: (context, snapshot) {
+                    final docs = snapshot.data?.docs ?? [];
+                    if (docs.isEmpty) {
+                      return const Text('No subjects in database yet. Add subjects in database.', style: TextStyle(color: Colors.grey, fontSize: 12));
+                    }
+                    return DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: 'Select Primary Subject *'),
+                      items: docs.map((d) {
+                        final sdata = d.data() as Map<String, dynamic>;
+                        final sname = sdata['name'] ?? d.id;
+                        return DropdownMenuItem<String>(value: sname, child: Text(sname));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) subjectCtrl.text = val;
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: teacherIdCtrl,
+                  decoration: const InputDecoration(labelText: 'Teacher ID *', hintText: 'TCH-0001'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: passwordCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Initial Password *',
+                    hintText: 'e.g. Wisdom@2026',
+                    helperText: 'Temporary login password for the teacher',
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      if (nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Name and Email are required.')),
+                        );
+                        return;
+                      }
+                      if (passwordCtrl.text.trim().length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Password must be at least 6 characters.')),
+                        );
+                        return;
+                      }
+
+                      setModalState(() => isSubmitting = true);
+
+                      try {
+                        final creds = await AdminService().registerTeacher(
+                          name: nameCtrl.text.trim(),
+                          email: emailCtrl.text.trim(),
+                          phone: phoneCtrl.text.trim(),
+                          teacherId: teacherIdCtrl.text.trim(),
+                          subject: subjectCtrl.text.trim().isEmpty ? 'General Subject' : subjectCtrl.text.trim(),
+                          password: passwordCtrl.text.trim(),
+                        );
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                        }
+                        if (context.mounted) {
+                          _showCredentialsGeneratedDialog(context, creds);
+                        }
+                      } catch (e) {
+                        setModalState(() => isSubmitting = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(e.toString().replaceAll('Exception: ', '')),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Text('Create Teacher'),
+            ),
+          ],
+        ),
       ),
     );
   }
