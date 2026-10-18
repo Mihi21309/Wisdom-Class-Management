@@ -749,25 +749,9 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
-                          TextButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).pushNamed('/firebase-setup');
-                            },
-                            icon: const Icon(Icons.bolt, size: 14, color: Color(0xFF2563EB)),
-                            label: const Text(
-                              'First Time Setup: Initialize Firebase',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF2563EB),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 12),
                           const Text(
-                            '© 2024 Wisdom Education Unit',
+                            '© 2026 Wisdom Education Unit. All Rights Reserved.',
                             style: TextStyle(fontSize: 10, color: Colors.grey),
                           ),
                         ],

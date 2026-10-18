@@ -127,7 +127,7 @@ class _ClassesTabState extends State<ClassesTab> with SingleTickerProviderStateM
             final title = data['classTitle'] ?? 'Live Classroom Session';
             final batch = data['batchName'] ?? 'Enrolled Students';
             final subject = data['subjectName'] ?? 'Core Subject';
-            final teacher = data['teacherName'] ?? 'Faculty Lecturer';
+            final teacher = data['teacherName'] ?? 'Teacher';
             final zoomLink = data['zoomLink'] ?? '';
             final duration = data['durationMinutes'] ?? 60;
             final dateStr = data['date'] ?? 'Upcoming Today';

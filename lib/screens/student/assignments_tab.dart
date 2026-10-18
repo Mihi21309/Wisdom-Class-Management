@@ -147,7 +147,7 @@ class _AssignmentsTabState extends State<AssignmentsTab> {
                       final isCompleted = submitted.contains(uid);
                       final title = data['title'] ?? 'Untitled Assignment';
                       final subject = data['subject'] ?? 'General';
-                      final teacher = data['teacher'] ?? 'Faculty';
+                      final teacher = data['teacher'] ?? 'Teacher';
                       final dueDate = data['dueDate'] ?? 'Open';
                       final resourceLink = (data['resourceLink'] ?? '').toString().trim();
                       final totalPoints = data['totalPoints'] ?? 100;

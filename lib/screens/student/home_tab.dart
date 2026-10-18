@@ -403,7 +403,7 @@ class HomeTab extends StatelessWidget {
                       final title = c['classTitle'] ?? 'Live Classroom Session';
                       final batch = c['batchName'] ?? 'All Enrolled Batches';
                       final subject = c['subjectName'] ?? 'General Subject';
-                      final teacher = c['teacherName'] ?? 'Faculty Lecturer';
+                      final teacher = c['teacherName'] ?? 'Teacher';
                       final duration = c['durationMinutes'] ?? 60;
                       final zoomLink = c['zoomLink'] ?? '';
 

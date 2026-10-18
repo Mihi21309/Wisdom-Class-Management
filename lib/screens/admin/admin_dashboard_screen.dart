@@ -85,7 +85,7 @@ class AdminHomeTab extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Wisdom Admin Console', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text('Wisdom Admin Portal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: AppColors.primary,
         actions: [
           IconButton(
@@ -135,7 +135,7 @@ class AdminHomeTab extends StatelessWidget {
                       children: [
                         Text('Wisdom Educational Unit', style: TextStyle(color: Colors.white70, fontSize: 12)),
                         Text('Administrator Portal', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                        Text('Full System CRUD Authority Active', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        Text('Institute Management Active', style: TextStyle(color: Colors.white70, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -145,14 +145,14 @@ class AdminHomeTab extends StatelessWidget {
             const SizedBox(height: 20),
 
             // Live Database Counters
-            const Text('Live System Entities (Cloud Firestore)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('Institute Overview', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: _buildMetricTile(
                     collection: 'students',
-                    label: 'Total Students',
+                    label: 'Students',
                     icon: Icons.people,
                     color: const Color(0xFF2563EB),
                     onTap: () => onNavigate?.call(1),
@@ -162,7 +162,7 @@ class AdminHomeTab extends StatelessWidget {
                 Expanded(
                   child: _buildMetricTile(
                     collection: 'teachers',
-                    label: 'Faculty Teachers',
+                    label: 'Teachers',
                     icon: Icons.school,
                     color: const Color(0xFF059669),
                     onTap: () => onNavigate?.call(2),
@@ -176,7 +176,7 @@ class AdminHomeTab extends StatelessWidget {
                 Expanded(
                   child: _buildMetricTile(
                     collection: 'classes',
-                    label: 'Live & Scheduled',
+                    label: 'Classes',
                     icon: Icons.video_camera_front,
                     color: const Color(0xFF7C3AED),
                     onTap: () => onNavigate?.call(3),
@@ -186,7 +186,7 @@ class AdminHomeTab extends StatelessWidget {
                 Expanded(
                   child: _buildMetricTile(
                     collection: 'batches',
-                    label: 'Academic Batches',
+                    label: 'Batches',
                     icon: Icons.class_,
                     color: const Color(0xFFD97706),
                     onTap: () => onNavigate?.call(4),
@@ -200,24 +200,24 @@ class AdminHomeTab extends StatelessWidget {
             const Text('Management Shortcuts', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             _buildActionCard(
-              title: 'Manage Student Accounts (CRUD)',
-              subtitle: 'Enroll, view, edit records, and delete students',
+              title: 'Manage Students',
+              subtitle: 'Enroll, view records, and manage student accounts',
               icon: Icons.person_add_alt_1,
               color: const Color(0xFF2563EB),
               onTap: () => onNavigate?.call(1),
             ),
             const SizedBox(height: 10),
             _buildActionCard(
-              title: 'Manage Faculty & Teachers (CRUD)',
-              subtitle: 'Register teachers, assign subjects, update credentials',
+              title: 'Manage Teachers',
+              subtitle: 'Register teachers, assign subjects, and manage staff',
               icon: Icons.school,
               color: const Color(0xFF059669),
               onTap: () => onNavigate?.call(2),
             ),
             const SizedBox(height: 10),
             _buildActionCard(
-              title: 'Manage Live Classes & Zoom (CRUD)',
-              subtitle: 'Schedule classes, set Zoom links, update duration or delete',
+              title: 'Manage Classes & Schedules',
+              subtitle: 'Schedule classes, set Zoom links, and update sessions',
               icon: Icons.videocam,
               color: const Color(0xFF7C3AED),
               onTap: () => onNavigate?.call(3),
@@ -241,27 +241,51 @@ class AdminHomeTab extends StatelessWidget {
         final count = snapshot.data?.docs.length ?? 0;
         return InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: color.withValues(alpha: 0.15),
-                  child: Icon(icon, color: color, size: 20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
                 ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('$count', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
-                    Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: color.withValues(alpha: 0.12),
+                      child: Icon(icon, color: color, size: 20),
+                    ),
+                    Text(
+                      '$count',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
                   ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF334155),
+                  ),
                 ),
               ],
             ),
@@ -542,7 +566,7 @@ class _AdminManageStudentsTabState extends State<AdminManageStudentsTab> {
                   builder: (context, snapshot) {
                     final docs = snapshot.data?.docs ?? [];
                     if (docs.isEmpty) {
-                      return const Text('No batches registered in database yet.', style: TextStyle(color: Colors.grey, fontSize: 12));
+                      return const Text('No batches available yet.', style: TextStyle(color: Colors.grey, fontSize: 12));
                     }
                     final uniqueBatches = docs.map((b) {
                       final bdata = b.data() as Map<String, dynamic>;
@@ -553,8 +577,8 @@ class _AdminManageStudentsTabState extends State<AdminManageStudentsTab> {
 
                     return DropdownButtonFormField<String>(
                       initialValue: validValue,
-                      hint: const Text('Choose a batch from database...'),
-                      decoration: const InputDecoration(labelText: 'Select Batch from Database *'),
+                      hint: const Text('Choose an academic batch...'),
+                      decoration: const InputDecoration(labelText: 'Select Academic Batch *'),
                       items: uniqueBatches.map((bname) {
                         return DropdownMenuItem<String>(value: bname, child: Text(bname));
                       }).toList(),
@@ -697,7 +721,7 @@ class _AdminManageStudentsTabState extends State<AdminManageStudentsTab> {
               await FirebaseFirestore.instance.collection('students').doc(doc.id).delete();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Student deleted from Firestore.')),
+                  const SnackBar(content: Text('Student deleted successfully.')),
                 );
               }
             },
@@ -713,7 +737,7 @@ class _AdminManageStudentsTabState extends State<AdminManageStudentsTab> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Students Management (CRUD)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text('Student Management', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: AppColors.primary,
         actions: [
           IconButton(
@@ -968,7 +992,7 @@ class _AdminManageTeachersTabState extends State<AdminManageTeachersTab> {
             children: [
               Icon(Icons.school, color: Color(0xFF059669)),
               SizedBox(width: 8),
-              Text('Register Faculty Teacher', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('Register Teacher', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ],
           ),
           content: SingleChildScrollView(
@@ -997,7 +1021,7 @@ class _AdminManageTeachersTabState extends State<AdminManageTeachersTab> {
                   builder: (context, snapshot) {
                     final docs = snapshot.data?.docs ?? [];
                     if (docs.isEmpty) {
-                      return const Text('No subjects in database yet. Add subjects in database.', style: TextStyle(color: Colors.grey, fontSize: 12));
+                      return const Text('No subjects available yet.', style: TextStyle(color: Colors.grey, fontSize: 12));
                     }
                     return DropdownButtonFormField<String>(
                       decoration: const InputDecoration(labelText: 'Select Primary Subject *'),
@@ -1151,7 +1175,7 @@ class _AdminManageTeachersTabState extends State<AdminManageTeachersTab> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Remove Teacher?'),
-        content: Text('Are you sure you want to remove $name from faculty directory?'),
+        content: Text('Are you sure you want to remove $name from the system?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
@@ -1161,7 +1185,7 @@ class _AdminManageTeachersTabState extends State<AdminManageTeachersTab> {
               await FirebaseFirestore.instance.collection('teachers').doc(doc.id).delete();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Teacher deleted from Firestore.')),
+                  const SnackBar(content: Text('Teacher removed successfully.')),
                 );
               }
             },
@@ -1177,7 +1201,7 @@ class _AdminManageTeachersTabState extends State<AdminManageTeachersTab> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Teachers & Faculty (CRUD)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text('Teacher Management', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: const Color(0xFF059669),
         actions: [
           IconButton(
@@ -1201,7 +1225,7 @@ class _AdminManageTeachersTabState extends State<AdminManageTeachersTab> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search faculty by name, ID, or subject...',
+                hintText: 'Search teachers by name, ID, or subject...',
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: Colors.white,
@@ -1391,8 +1415,8 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
                       return (data['name'] ?? d.id).toString();
                     }).toSet().toList();
                     return DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Select Subject from Database *'),
-                      hint: Text(unique.isEmpty ? 'No subjects in database' : 'Choose subject...'),
+                      decoration: const InputDecoration(labelText: 'Select Subject *'),
+                      hint: Text(unique.isEmpty ? 'No subjects available' : 'Choose subject...'),
                       items: unique.map((name) {
                         return DropdownMenuItem<String>(value: name, child: Text(name));
                       }).toList(),
@@ -1413,8 +1437,8 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
                       return (data['name'] ?? d.id).toString();
                     }).toSet().toList();
                     return DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Select Target Batch from Database *'),
-                      hint: Text(unique.isEmpty ? 'No batches in database' : 'Choose batch...'),
+                      decoration: const InputDecoration(labelText: 'Select Target Batch *'),
+                      hint: Text(unique.isEmpty ? 'No batches available' : 'Choose batch...'),
                       items: unique.map((name) {
                         return DropdownMenuItem<String>(value: name, child: Text(name));
                       }).toList(),
@@ -1435,8 +1459,8 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
                       return (data['name'] ?? d.id).toString();
                     }).toSet().toList();
                     return DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Assign Faculty Teacher from Database *'),
-                      hint: Text(unique.isEmpty ? 'No teachers in database' : 'Choose teacher...'),
+                      decoration: const InputDecoration(labelText: 'Assign Teacher *'),
+                      hint: Text(unique.isEmpty ? 'No teachers registered' : 'Choose teacher...'),
                       items: unique.map((name) {
                         return DropdownMenuItem<String>(value: name, child: Text(name));
                       }).toList(),
@@ -1590,7 +1614,7 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
                 final docs = snapshot.data?.docs ?? [];
                 return DropdownButtonFormField<String>(
                   initialValue: teacherCtrl.text.isNotEmpty ? teacherCtrl.text : null,
-                  decoration: const InputDecoration(labelText: 'Assigned Teacher from Database'),
+                  decoration: const InputDecoration(labelText: 'Assigned Teacher'),
                   items: docs.map((d) {
                     final tdata = d.data() as Map<String, dynamic>;
                     final tname = tdata['name'] ?? d.id;
@@ -1636,7 +1660,7 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Cancel / Delete Class?'),
-        content: const Text('Are you sure you want to delete this live class session from Firestore?'),
+        content: const Text('Are you sure you want to delete this scheduled class session?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
@@ -1646,7 +1670,7 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
               await FirebaseFirestore.instance.collection('classes').doc(doc.id).delete();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Class deleted from Firestore.')),
+                  const SnackBar(content: Text('Class deleted successfully.')),
                 );
               }
             },
@@ -1662,7 +1686,7 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Classes & Zoom Schedule (CRUD)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text('Class Schedules & Live Sessions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: const Color(0xFF7C3AED),
         actions: [
           IconButton(

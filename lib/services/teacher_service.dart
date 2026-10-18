@@ -85,12 +85,12 @@ class TeacherService {
     String? recordingLink,
   }) async {
     final currentTeacher = _auth.currentUser;
-    String teacherName = 'Faculty Educator';
+    String teacherName = 'Teacher';
     if (currentTeacher != null) {
       try {
         final tDoc = await _firestore.collection('teachers').doc(currentTeacher.uid).get();
         if (tDoc.exists && tDoc.data() != null) {
-          teacherName = tDoc.data()!['name'] ?? currentTeacher.displayName ?? 'Faculty Educator';
+          teacherName = tDoc.data()!['name'] ?? currentTeacher.displayName ?? 'Teacher';
         }
       } catch (_) {}
     }
