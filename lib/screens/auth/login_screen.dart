@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../home_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../student/student_dashboard_screen.dart';
 import '../../services/student_service.dart';
 import '../../services/admin_service.dart';
+import '../../services/teacher_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,6 +30,7 @@ class _LoginScreenState extends State<LoginScreen>
   late TextEditingController _passwordController;
   final StudentService _studentService = StudentService();
   final AdminService _adminService = AdminService();
+  final TeacherService _teacherService = TeacherService();
 
   @override
   void initState() {
@@ -110,14 +112,21 @@ class _LoginScreenState extends State<LoginScreen>
       if (loginInput.contains('@')) {
         emailToUse = loginInput;
       } else {
+        // Try resolving student ID first
         final student = await _studentService.getStudentByStudentId(loginInput);
-        emailToUse = student?.email;
+        if (student != null) {
+          emailToUse = student.email;
+        } else {
+          // Try resolving teacher ID
+          final teacher = await _teacherService.getTeacherByTeacherId(loginInput);
+          emailToUse = teacher?.email;
+        }
       }
 
       if (emailToUse == null || emailToUse.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Student ID not found.')),
+            const SnackBar(content: Text('Account ID or Email not found.')),
           );
         }
         return;
@@ -142,20 +151,32 @@ class _LoginScreenState extends State<LoginScreen>
 
         if (isAdmin) {
           Navigator.of(context).pushReplacementNamed('/admin-dashboard');
+          return;
+        }
+
+        // Check if user is teacher
+        final isTeacher = await _teacherService.isCurrentUserTeacher();
+
+        if (!mounted) return;
+
+        if (isTeacher) {
+          Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
+          return;
+        }
+
+        // Check if student needs password change
+        final mustChange = await _studentService.mustChangePassword(user.uid);
+
+        if (!mounted) return;
+
+        if (mustChange) {
+          Navigator.of(context).pushReplacementNamed('/change-password');
         } else {
-          // Check if student needs password change
-          final mustChange = await _studentService.mustChangePassword(user.uid);
-
-          if (!mounted) return;
-
-          if (mustChange) {
-            Navigator.of(context).pushReplacementNamed('/change-password');
-          } else {
             // Navigate to home with animation
             Navigator.of(context).pushReplacement(
               PageRouteBuilder(
                 pageBuilder: (context, animation, secondaryAnimation) =>
-                    const HomeScreen(),
+                    const StudentDashboardScreen(),
                 transitionsBuilder:
                     (context, animation, secondaryAnimation, child) {
                       const begin = Offset(1.0, 0.0);
@@ -184,7 +205,6 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             );
           }
-        }
       }
     } catch (e) {
       if (mounted) {
@@ -729,6 +749,22 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                             ],
                           ),
+                          const SizedBox(height: 6),
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pushNamed('/firebase-setup');
+                            },
+                            icon: const Icon(Icons.bolt, size: 14, color: Color(0xFF2563EB)),
+                            label: const Text(
+                              'First Time Setup: Initialize Firebase',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF2563EB),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
                           const SizedBox(height: 8),
                           const Text(
                             '© 2024 Wisdom Education Unit',

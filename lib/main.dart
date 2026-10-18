@@ -1,40 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/auth/splash_screen.dart';
-import 'screens/auth/change_password_screen.dart';
-import 'screens/admin/admin_dashboard_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/student/student_dashboard_screen.dart';
+import 'core/constants/app_colors.dart';
+import 'core/routes/app_routes.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Hide the default Flutter splash
-  await Future.delayed(Duration.zero);
-
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const MyApp());
+  runApp(const WisdomApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class WisdomApp extends StatelessWidget {
+  const WisdomApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Wisdom Class Management',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1E40AF)),
+        useMaterial3: true,
+        scaffoldBackgroundColor: AppColors.background,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          primary: AppColors.primary,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
       ),
-      home: const SplashScreen(),
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/change-password': (context) => const ChangePasswordScreen(),
-        '/admin-dashboard': (context) => const AdminDashboardScreen(),
-        '/home': (context) => const HomeScreen(),
-        '/student-dashboard': (context) => const StudentDashboardScreen(),
-      },
+      initialRoute: AppRoutes.splash,
+      routes: AppRoutes.routes,
     );
   }
 }
