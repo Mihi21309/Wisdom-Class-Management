@@ -22,7 +22,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       const AdminManageStudentsTab(),
       const AdminManageTeachersTab(),
       const AdminManageClassesTab(),
-      const AdminReportsTab(),
+      const AdminManageBatchesTab(),
     ];
 
     return Scaffold(
@@ -62,9 +62,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             label: 'Classes',
           ),
           NavigationDestination(
-            icon: Icon(Icons.assessment_outlined),
-            selectedIcon: Icon(Icons.assessment, color: AppColors.primary),
-            label: 'Reports',
+            icon: Icon(Icons.class_outlined),
+            selectedIcon: Icon(Icons.class_, color: AppColors.primary),
+            label: 'Batches',
           ),
         ],
       ),
@@ -221,6 +221,14 @@ class AdminHomeTab extends StatelessWidget {
               icon: Icons.videocam,
               color: const Color(0xFF7C3AED),
               onTap: () => onNavigate?.call(3),
+            ),
+            const SizedBox(height: 10),
+            _buildActionCard(
+              title: 'Manage Academic Batches',
+              subtitle: 'Create batches, assign academic streams, and curriculum',
+              icon: Icons.class_,
+              color: const Color(0xFFD97706),
+              onTap: () => onNavigate?.call(4),
             ),
           ],
         ),
@@ -862,7 +870,10 @@ class _AdminManageStudentsTabState extends State<AdminManageStudentsTab> {
                                 const SizedBox(height: 2),
                                 Text(email, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                                 const SizedBox(height: 4),
-                                Row(
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     InkWell(
                                       onTap: () async {
@@ -906,8 +917,8 @@ class _AdminManageStudentsTabState extends State<AdminManageStudentsTab> {
                                             const SizedBox(width: 3),
                                             Text(
                                               (data['feeStatus'] ?? 'Paid') == 'Paid'
-                                                  ? 'Fee: Paid (${data['feeMonth'] ?? 'Oct'})'
-                                                  : 'Fee: Overdue / Due',
+                                                  ? 'Fee: Paid'
+                                                  : 'Fee: Due',
                                               style: TextStyle(
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.bold,
@@ -920,10 +931,8 @@ class _AdminManageStudentsTabState extends State<AdminManageStudentsTab> {
                                         ),
                                       ),
                                     ),
-                                    if (phone.isNotEmpty) ...[
-                                      const SizedBox(width: 8),
+                                    if (phone.isNotEmpty)
                                       Text('📞 $phone', style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
-                                    ],
                                   ],
                                 ),
                               ],
@@ -933,11 +942,16 @@ class _AdminManageStudentsTabState extends State<AdminManageStudentsTab> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                 icon: const Icon(Icons.edit, size: 18, color: Color(0xFF2563EB)),
                                 tooltip: 'Edit',
                                 onPressed: () => _showEditStudentDialog(context, doc),
                               ),
+                              const SizedBox(width: 4),
                               IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                 icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFDC2626)),
                                 tooltip: 'Delete',
                                 onPressed: () => _confirmDeleteStudent(context, doc),
@@ -1270,7 +1284,7 @@ class _AdminManageTeachersTabState extends State<AdminManageTeachersTab> {
                   itemBuilder: (context, i) {
                     final doc = filtered[i];
                     final data = doc.data() as Map<String, dynamic>;
-                    final name = data['name'] ?? 'Faculty Lecturer';
+                    final name = data['name'] ?? 'Teacher';
                     final teacherId = data['teacherId'] ?? 'TCH-000';
                     final email = data['email'] ?? '';
                     final subject = data['subject'] ?? 'Core Subjects';
@@ -1321,7 +1335,12 @@ class _AdminManageTeachersTabState extends State<AdminManageTeachersTab> {
                                   ],
                                 ),
                                 const SizedBox(height: 2),
-                                Text('$subject • $email', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                                Text(
+                                  '$subject • $email',
+                                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ],
                             ),
                           ),
@@ -1329,11 +1348,16 @@ class _AdminManageTeachersTabState extends State<AdminManageTeachersTab> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                 icon: const Icon(Icons.edit, size: 18, color: Color(0xFF059669)),
                                 tooltip: 'Edit',
                                 onPressed: () => _showEditTeacherDialog(context, doc),
                               ),
+                              const SizedBox(width: 4),
                               IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                 icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFDC2626)),
                                 tooltip: 'Delete',
                                 onPressed: () => _confirmDeleteTeacher(context, doc),
@@ -1802,109 +1826,383 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// TAB 5: REPORTS & ANALYTICS
+// TAB 5: ACADEMIC BATCHES MANAGEMENT (CRUD)
 // ─────────────────────────────────────────────────────────────
-class AdminReportsTab extends StatelessWidget {
-  const AdminReportsTab({super.key});
+class AdminManageBatchesTab extends StatefulWidget {
+  const AdminManageBatchesTab({super.key});
+
+  @override
+  State<AdminManageBatchesTab> createState() => _AdminManageBatchesTabState();
+}
+
+class _AdminManageBatchesTabState extends State<AdminManageBatchesTab> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _showAddBatchDialog(BuildContext context) {
+    final nameCtrl = TextEditingController();
+    final codeCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.class_, color: Color(0xFFD97706)),
+            SizedBox(width: 8),
+            Text('Create Academic Batch', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Batch Name *',
+                  hintText: 'e.g. 2026 A/L Science & Maths',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: codeCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Batch Code *',
+                  hintText: 'e.g. 2026-AL-SCI',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: descCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Description / Curriculum',
+                  hintText: 'e.g. Advanced Level Physical & Bio Science',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD97706),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              if (nameCtrl.text.trim().isEmpty || codeCtrl.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Batch Name and Code are required.')),
+                );
+                return;
+              }
+              Navigator.pop(ctx);
+              await FirebaseFirestore.instance.collection('batches').add({
+                'name': nameCtrl.text.trim(),
+                'code': codeCtrl.text.trim().toUpperCase(),
+                'description': descCtrl.text.trim(),
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Academic batch created successfully!')),
+                );
+              }
+            },
+            child: const Text('Create Batch'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditBatchDialog(BuildContext context, DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final nameCtrl = TextEditingController(text: data['name'] ?? '');
+    final codeCtrl = TextEditingController(text: data['code'] ?? '');
+    final descCtrl = TextEditingController(text: data['description'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Academic Batch'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Batch Name *'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: codeCtrl,
+                decoration: const InputDecoration(labelText: 'Batch Code *'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: descCtrl,
+                decoration: const InputDecoration(labelText: 'Description'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD97706),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await FirebaseFirestore.instance.collection('batches').doc(doc.id).update({
+                'name': nameCtrl.text.trim(),
+                'code': codeCtrl.text.trim().toUpperCase(),
+                'description': descCtrl.text.trim(),
+                'updatedAt': FieldValue.serverTimestamp(),
+              });
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Academic batch updated successfully!')),
+                );
+              }
+            },
+            child: const Text('Save Changes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteBatch(BuildContext context, DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final name = data['name'] ?? 'Batch';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Academic Batch?'),
+        content: Text('Are you sure you want to delete "$name"? Students enrolled in this batch may need to be updated.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await FirebaseFirestore.instance.collection('batches').doc(doc.id).delete();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Academic batch removed successfully.')),
+                );
+              }
+            },
+            child: const Text('Delete Batch'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Academic Reports & Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: AppColors.primary,
+        title: const Text('Academic Batches', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        backgroundColor: const Color(0xFFD97706),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            tooltip: 'Add Batch',
+            onPressed: () => _showAddBatchDialog(context),
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Attendance Summary
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('attendance').snapshots(),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFFD97706),
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Batch'),
+        onPressed: () => _showAddBatchDialog(context),
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search batches by name or code...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+              ),
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val.trim().toLowerCase();
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('batches').snapshots(),
               builder: (context, snapshot) {
-                final total = snapshot.data?.docs.length ?? 0;
-                final present = snapshot.data?.docs.where((d) {
-                  final m = d.data() as Map<String, dynamic>;
-                  return (m['status'] ?? '').toString().toLowerCase() == 'present';
-                }).length ?? 0;
-                final rate = total > 0 ? ((present / total) * 100).round() : 100;
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
+                final docs = snapshot.data?.docs ?? [];
+                final filtered = docs.where((d) {
+                  final data = d.data() as Map<String, dynamic>;
+                  final name = (data['name'] ?? '').toString().toLowerCase();
+                  final code = (data['code'] ?? '').toString().toLowerCase();
+                  final desc = (data['description'] ?? '').toString().toLowerCase();
+                  return name.contains(_searchQuery) || code.contains(_searchQuery) || desc.contains(_searchQuery);
+                }).toList();
+
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.class_outlined, size: 64, color: Colors.grey[400]),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No Academic Batches Found',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Tap "+ Add Batch" to create an academic stream or grade batch.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.only(left: 16, right: 16, bottom: 80),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  itemBuilder: (context, i) {
+                    final doc = filtered[i];
+                    final data = doc.data() as Map<String, dynamic>;
+                    final name = data['name'] ?? 'Academic Batch';
+                    final code = data['code'] ?? 'BATCH';
+                    final description = data['description'] ?? 'Enrolled curriculum';
+
+                    return Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
                         children: [
                           CircleAvatar(
-                            backgroundColor: Color(0xFFD1FAE5),
-                            child: Icon(Icons.how_to_reg, color: Color(0xFF059669)),
+                            radius: 20,
+                            backgroundColor: const Color(0xFFFEF3C7),
+                            child: const Icon(Icons.class_, color: Color(0xFFD97706), size: 20),
                           ),
-                          SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        name,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF3C7),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        code,
+                                        style: const TextStyle(fontSize: 10, color: Color(0xFFD97706), fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  description.isNotEmpty ? description : 'Active Academic Batch',
+                                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text('Attendance Compliance Report', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              Text('Real-time synchronization across batches', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                icon: const Icon(Icons.edit, size: 18, color: Color(0xFFD97706)),
+                                tooltip: 'Edit',
+                                onPressed: () => _showEditBatchDialog(context, doc),
+                              ),
+                              const SizedBox(width: 4),
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFDC2626)),
+                                tooltip: 'Delete',
+                                onPressed: () => _confirmDeleteBatch(context, doc),
+                              ),
                             ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      Text('$rate% Institutional Attendance Rate',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
-                      const SizedBox(height: 4),
-                      Text('Total marked sessions: $total • Present logs: $present',
-                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                    ],
-                  ),
+                    );
+                  },
                 );
               },
             ),
-            const SizedBox(height: 16),
-
-            // Examination Eligibility Report
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: Color(0xFFEFF6FF),
-                        child: Icon(Icons.verified, color: Color(0xFF2563EB)),
-                      ),
-                      SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Final Exam Eligibility (80% Rule)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          Text('Automated Wisdom compliance algorithm', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                        ],
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12),
-                  Text('All students exceeding 80% attendance threshold are marked "Exam Eligible" automatically.',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
