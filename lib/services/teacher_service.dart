@@ -105,6 +105,27 @@ class TeacherService {
     }
   }
 
+  /// Create / publish a new live class
+  Future<void> createLiveClass({
+    required String title,
+    required String zoomLink,
+    required int durationMinutes,
+    required String batchId,
+    required String subjectId,
+  }) async {
+    final currentTeacher = _auth.currentUser;
+    await _firestore.collection('classes').add({
+      'classTitle': title,
+      'batchId': batchId,
+      'subjectId': subjectId,
+      'teacherId': currentTeacher?.uid ?? '',
+      'zoomLink': zoomLink,
+      'scheduledDateTime': DateTime.now().toIso8601String(),
+      'durationMinutes': durationMinutes,
+      'createdAt': DateTime.now().toIso8601String(),
+    });
+  }
+
   /// Mark attendance for a student
   Future<void> markAttendance({
     required String classId,

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/app_colors.dart';
 import 'home_tab.dart';
 import 'classes_tab.dart';
-import 'attendance_tab.dart';
 import 'assignments_tab.dart';
+import 'attendance_tab.dart';
 import 'profile_tab.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
@@ -15,14 +16,6 @@ class StudentDashboardScreen extends StatefulWidget {
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _tabs = [
-    const HomeTab(),
-    const ClassesTab(),
-    const AssignmentsTab(),
-    const AttendanceTab(),
-    const ProfileTab(),
-  ];
-
   void _onTabSelected(int index) {
     setState(() {
       _selectedIndex = index;
@@ -31,23 +24,51 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> tabs = [
+      HomeTab(onNavigateTab: _onTabSelected),
+      const ClassesTab(),
+      const AssignmentsTab(),
+      const AttendanceTab(),
+      const ProfileTab(),
+    ];
+
     return Scaffold(
-      body: _tabs[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onTabSelected,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF1E40AF),
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.class_), label: 'Classes'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'Tasks'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: tabs,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onTabSelected,
+        backgroundColor: Colors.white,
+        elevation: 8,
+        indicatorColor: AppColors.primary.withValues(alpha: 0.15),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home, color: AppColors.primary),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.video_camera_front_outlined),
+            selectedIcon: Icon(Icons.video_camera_front, color: AppColors.primary),
+            label: 'Classes',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.assignment_outlined),
+            selectedIcon: Icon(Icons.assignment, color: AppColors.primary),
+            label: 'Tasks',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.how_to_reg_outlined),
+            selectedIcon: Icon(Icons.how_to_reg, color: AppColors.primary),
             label: 'Attendance',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person, color: AppColors.primary),
+            label: 'Profile',
+          ),
         ],
       ),
     );

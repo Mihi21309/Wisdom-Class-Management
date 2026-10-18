@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/app_colors.dart';
 import 'package:wisdom_class_management/models/student.dart';
 import 'package:wisdom_class_management/services/firebase_service.dart';
 import 'package:wisdom_class_management/services/student_service.dart';
@@ -27,7 +28,7 @@ class _ProfileTabState extends State<ProfileTab> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
+        content: const Text('Are you sure you want to sign out of Wisdom Student Portal?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -44,7 +45,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 );
               }
             },
-            child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+            child: const Text('Sign Out', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -56,292 +57,232 @@ class _ProfileTabState extends State<ProfileTab> {
     final currentUserUid = _firebaseService.currentUserUid;
 
     if (currentUserUid == null) {
-      return const Center(child: Text('Please log in to view your profile'));
+      return const Scaffold(
+        body: Center(child: Text('Please log in to view your profile')),
+      );
     }
 
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: () async {
-          setState(() {});
-        },
-        child: StreamBuilder<Student?>(
-          stream: _studentService.streamStudentProfile(currentUserUid),
-          builder: (context, snapshot) {
-            final student = snapshot.data;
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: const Text('My Profile & Account', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        backgroundColor: AppColors.primary,
+        elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Sign Out',
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: _showLogoutDialog,
+          ),
+        ],
+      ),
+      body: StreamBuilder<Student?>(
+        stream: _studentService.streamStudentProfile(currentUserUid),
+        builder: (context, snapshot) {
+          final student = snapshot.data;
 
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            if (student == null) {
-              return Center(
+          if (student == null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.person_off_outlined, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  const Text('Profile Record Incomplete', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  const Text('Please verify your student credentials with Wisdom Admin.', style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            );
+          }
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              // 1. Profile Header
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF1E40AF), Color(0xFF3B82F6)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF1E40AF).withValues(alpha: 0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.person, size: 64, color: Colors.grey[400]),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Profile not found',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: Colors.white,
+                      child: Text(
+                        student.name.isNotEmpty ? student.name[0].toUpperCase() : 'S',
+                        style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 14),
                     Text(
-                      'Please complete your profile setup',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
+                      student.name,
+                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      student.email,
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        'Student ID: ${student.studentId ?? 'STU-ONLINE'}',
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ],
                 ),
-              );
-            }
+              ),
+              const SizedBox(height: 20),
 
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Profile Header
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Colors.blue[400]!, Colors.blue[600]!],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
+              // 2. Personal Information Section
+              _buildSection(
+                title: 'Account Information',
+                children: [
+                  _buildInfoTile(label: 'Full Name', value: student.name, icon: Icons.person_outline),
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  _buildInfoTile(label: 'Email Address', value: student.email, icon: Icons.email_outlined),
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  _buildInfoTile(
+                    label: 'Phone Contact',
+                    value: student.phone.isEmpty ? 'Not provided' : student.phone,
+                    icon: Icons.phone_outlined,
                   ),
-                  child: Column(
-                    children: [
-                      // Avatar
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                          color: Colors.white,
-                        ),
-                        child: student.profilePictureUrl != null
-                            ? ClipOval(
-                                child: Image.network(
-                                  student.profilePictureUrl!,
-                                  fit: BoxFit.cover,
-                                ),
-                              )
-                            : Center(
-                                child: Icon(
-                                  Icons.person,
-                                  size: 50,
-                                  color: Colors.blue[400],
-                                ),
-                              ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Name
-                      Text(
-                        student.name,
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Email
-                      Text(
-                        student.email,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                      ),
-                    ],
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  _buildInfoTile(
+                    label: 'Enrollment Date',
+                    value: '${student.enrollmentDate.day}/${student.enrollmentDate.month}/${student.enrollmentDate.year}',
+                    icon: Icons.calendar_today_outlined,
                   ),
-                ),
-                const SizedBox(height: 24),
+                ],
+              ),
+              const SizedBox(height: 20),
 
-                // Profile Information Section
-                _buildSection(
-                  context,
-                  title: 'Profile Information',
-                  children: [
-                    _buildInfoTile(
-                      context,
-                      label: 'Full Name',
-                      value: student.name,
-                      icon: Icons.person,
-                    ),
-                    _buildInfoTile(
-                      context,
-                      label: 'Email',
-                      value: student.email,
-                      icon: Icons.email,
-                    ),
-                    _buildInfoTile(
-                      context,
-                      label: 'Phone',
-                      value: student.phone.isEmpty
-                          ? 'Not provided'
-                          : student.phone,
-                      icon: Icons.phone,
-                    ),
-                    _buildInfoTile(
-                      context,
-                      label: 'Enrollment Date',
-                      value:
-                          '${student.enrollmentDate.day}/${student.enrollmentDate.month}/${student.enrollmentDate.year}',
-                      icon: Icons.calendar_today,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Enrolled Batches Section
-                _buildSection(
-                  context,
-                  title: 'Enrolled Batches (${student.enrolledBatches.length})',
-                  children: student.enrolledBatches.isEmpty
-                      ? [
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(
-                              'No batches enrolled',
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(color: Colors.grey[500]),
-                            ),
+              // 3. Batches Enrolled
+              _buildSection(
+                title: 'Enrolled Batches (${student.enrolledBatches.length})',
+                children: student.enrolledBatches.isEmpty
+                    ? [
+                        const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text(
+                            'No specific batch assigned yet. Check with administration.',
+                            style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
                           ),
-                        ]
-                      : [
-                          ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: student.enrolledBatches.length,
-                            separatorBuilder: (context, index) =>
-                                const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              return FutureBuilder<dynamic>(
-                                future: _studentService.getBatchById(
-                                  student.enrolledBatches[index],
-                                ),
-                                builder: (context, snapshot) {
-                                  final batch = snapshot.data;
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
-                                    ),
-                                    child: Row(
+                        ),
+                      ]
+                    : student.enrolledBatches.map((batchId) {
+                        return FutureBuilder<dynamic>(
+                          future: _studentService.getBatchById(batchId),
+                          builder: (context, bSnap) {
+                            final batch = bSnap.data;
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor: const Color(0xFFEFF6FF),
+                                    child: const Icon(Icons.school, size: 16, color: AppColors.primary),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Icon(
-                                          Icons.class_,
-                                          color: Colors.blue[400],
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                batch?.name ?? 'Loading...',
-                                                style: Theme.of(
-                                                  context,
-                                                ).textTheme.bodyMedium,
-                                              ),
-                                              Text(
-                                                'Year ${batch?.year ?? ''}',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodySmall
-                                                    ?.copyWith(
-                                                      color: Colors.grey[500],
-                                                    ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Icon(
-                                          Icons.arrow_forward_ios,
-                                          size: 16,
-                                          color: Colors.grey[400],
-                                        ),
+                                        Text(batch?.name ?? batchId, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                        Text('Academic Year ${batch?.year ?? 2026}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                                       ],
                                     ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ],
-                ),
-                const SizedBox(height: 24),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      }).toList(),
+              ),
+              const SizedBox(height: 24),
 
-                // Action Buttons
-                ElevatedButton.icon(
+              // 4. Action Buttons
+              SizedBox(
+                height: 46,
+                child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            EditProfileScreen(student: student),
-                      ),
+                      MaterialPageRoute(builder: (context) => EditProfileScreen(student: student)),
                     );
                   },
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Edit Profile'),
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: const Text('Update Profile Details', style: TextStyle(fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 46,
+                child: OutlinedButton.icon(
                   onPressed: _showLogoutDialog,
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Sign Out'),
+                  icon: const Icon(Icons.logout, size: 18),
+                  label: const Text('Sign Out of Wisdom', style: TextStyle(fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
+                    foregroundColor: const Color(0xFFDC2626),
+                    side: const BorderSide(color: Color(0xFFDC2626)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
-              ],
-            );
-          },
-        ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildSection(
-    BuildContext context, {
-    required String title,
-    required List<Widget> children,
-  }) {
+  Widget _buildSection({required String title, required List<Widget> children}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[300]!),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
           child: Column(children: children),
         ),
@@ -349,35 +290,20 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
-  Widget _buildInfoTile(
-    BuildContext context, {
-    required String label,
-    required String value,
-    required IconData icon,
-  }) {
+  Widget _buildInfoTile({required String label, required String value, required IconData icon}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Icon(icon, color: Colors.blue[400], size: 24),
-          const SizedBox(width: 16),
+          Icon(icon, color: AppColors.primary, size: 20),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-                ),
+                Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                const SizedBox(height: 2),
+                Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
               ],
             ),
           ),

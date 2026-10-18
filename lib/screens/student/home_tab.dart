@@ -1,643 +1,673 @@
 import 'package:flutter/material.dart';
-import 'package:wisdom_class_management/models/batch.dart';
-import 'package:wisdom_class_management/models/student.dart';
-import 'package:wisdom_class_management/models/zoom_class.dart';
-import 'package:wisdom_class_management/services/firebase_service.dart';
-import 'package:wisdom_class_management/services/student_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../core/constants/app_colors.dart';
 
-class HomeTab extends StatefulWidget {
-  const HomeTab({super.key});
+class HomeTab extends StatelessWidget {
+  final void Function(int index)? onNavigateTab;
 
-  @override
-  State<HomeTab> createState() => _HomeTabState();
-}
+  const HomeTab({super.key, this.onNavigateTab});
 
-class _HomeTabState extends State<HomeTab> {
-  late final FirebaseService _firebaseService;
-  late final StudentService _studentService;
-
-  @override
-  void initState() {
-    super.initState();
-    _firebaseService = FirebaseService();
-    _studentService = StudentService();
+  Future<void> _launchZoom(BuildContext context, String? url) async {
+    if (url == null || url.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No meeting link provided for this class.')),
+      );
+      return;
+    }
+    final uri = Uri.parse(url.trim());
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open Zoom link on this device.')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentUserUid = _firebaseService.currentUserUid;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final uid = currentUser?.uid ?? '';
 
-    if (currentUserUid == null) {
-      return const Center(child: Text('Please log in to view your dashboard'));
-    }
-
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: () async {
-          setState(() {});
-        },
-        child: ListView(
-          padding: EdgeInsets.zero,
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: const Row(
           children: [
-            StreamBuilder<Student?>(
-              stream: _studentService.streamStudentProfile(currentUserUid),
-              builder: (context, snapshot) {
-                final student = snapshot.data;
-                final email = student?.email ?? '';
-                return Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF1E40AF), Color(0xFF1E3A8A)],
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Wisdom Educational Unit',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: Colors.white70),
-                          ),
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: Colors.white12,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.notifications_none,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                          ),
-                        ],
+            Icon(Icons.school, color: Colors.white, size: 22),
+            SizedBox(width: 8),
+            Text(
+              'Wisdom Student Portal',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.primary,
+        elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Sign Out',
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) {
+                Navigator.of(context).pushReplacementNamed('/login');
+              }
+            },
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          // StreamBuilders automatically react to Firestore updates
+          await Future.delayed(const Duration(milliseconds: 400));
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. HERO STUDENT WELCOME CARD (Live Firestore profile)
+              StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance.collection('students').doc(uid).snapshots(),
+                builder: (context, snapshot) {
+                  final data = snapshot.data?.data() as Map<String, dynamic>?;
+                  final name = data?['name'] ?? currentUser?.displayName ?? 'Student';
+                  final studentId = data?['studentId'] ?? 'STU-ONLINE';
+                  final email = data?['email'] ?? currentUser?.email ?? '';
+
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF1E40AF), Color(0xFF3B82F6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Container(
-                            width: 56,
-                            height: 56,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white12,
-                            ),
-                            child: Center(
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF1E40AF).withValues(alpha: 0.25),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Colors.white.withValues(alpha: 0.2),
                               child: Text(
-                                (student?.name
-                                        .split(' ')
-                                        .map(
-                                          (e) => e.isNotEmpty
-                                              ? e[0].toUpperCase()
-                                              : '',
-                                        )
-                                        .join() ??
-                                    'ST'),
+                                name.isNotEmpty ? name[0].toUpperCase() : 'S',
                                 style: const TextStyle(
                                   color: Colors.white,
+                                  fontSize: 24,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Good Morning',
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(color: Colors.white70),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  student?.name ?? 'Student',
-                                  style: Theme.of(context).textTheme.titleLarge
-                                      ?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                if (email.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Welcome back,',
+                                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                                  ),
                                   Text(
-                                    email,
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(color: Colors.white70),
+                                    name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  const SizedBox(height: 2),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'ID: $studentId • $email',
+                                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
                                 ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildAttendanceHeaderStat(currentUserUid),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildHeaderStat('N/A', 'Pending Tasks'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Quick Actions',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  GridView.count(
-                    crossAxisCount: 4,
-                    childAspectRatio: 0.75,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    children: [
-                      _buildQuickAction(
-                        context,
-                        icon: Icons.book,
-                        label: 'My Classes',
-                        color: const Color(0xFF1E40AF),
-                        bgColor: const Color(0xFFDBEAFE),
-                      ),
-                      _buildQuickAction(
-                        context,
-                        icon: Icons.assignment,
-                        label: 'Assignments',
-                        color: const Color(0xFF92400E),
-                        bgColor: const Color(0xFFFEF3C7),
-                      ),
-                      _buildQuickAction(
-                        context,
-                        icon: Icons.calendar_today,
-                        label: 'Attendance',
-                        color: const Color(0xFF065F46),
-                        bgColor: const Color(0xFFD1FAE5),
-                      ),
-                      _buildQuickAction(
-                        context,
-                        icon: Icons.description,
-                        label: 'Materials',
-                        color: const Color(0xFF9D174D),
-                        bgColor: const Color(0xFFFCE7F3),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Upcoming Classes',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        'See All',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF1E40AF),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  FutureBuilder<List<ZoomClass>>(
-                    future: _studentService.getUpcomingZoomClasses(
-                      currentUserUid,
-                    ),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      final classes = snapshot.data ?? [];
-                      if (classes.isEmpty) {
-                        return Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: Text(
-                              'No upcoming classes',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ),
-                        );
-                      }
-
-                      final items = classes.take(2).toList();
-                      return Column(
-                        children: List.generate(
-                          items.length,
-                          (index) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _buildUpcomingClassCard(
-                              context,
-                              items[index],
-                              index: index,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Notifications',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        'See All',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF1E40AF),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey[200]!),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          margin: const EdgeInsets.only(top: 4),
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(0xFF1E40AF),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'No notifications yet',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Updates will appear here when available.',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+
+                        // 3 Live Quick Stats Row
+                        Row(
+                          children: [
+                            // Stat 1: Live Attendance %
+                            Expanded(
+                              child: StreamBuilder<QuerySnapshot>(
+                                stream: FirebaseFirestore.instance
+                                    .collection('attendance')
+                                    .where('studentUid', isEqualTo: uid)
+                                    .snapshots(),
+                                builder: (context, attSnap) {
+                                  final docs = attSnap.data?.docs ?? [];
+                                  if (docs.isEmpty) {
+                                    return _buildMiniStat(
+                                      title: 'Attendance',
+                                      value: '100%',
+                                      subtitle: 'Perfect Record',
+                                      icon: Icons.check_circle_outline,
+                                    );
+                                  }
+                                  final present = docs.where((d) {
+                                    final m = d.data() as Map<String, dynamic>;
+                                    return m['status'] == 'present';
+                                  }).length;
+                                  final pct = ((present / docs.length) * 100).round();
+                                  return _buildMiniStat(
+                                    title: 'Attendance',
+                                    value: '$pct%',
+                                    subtitle: '$present of ${docs.length} sessions',
+                                    icon: Icons.how_to_reg,
+                                  );
+                                },
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 10),
+
+                            // Stat 2: Pending Tasks
+                            Expanded(
+                              child: StreamBuilder<QuerySnapshot>(
+                                stream: FirebaseFirestore.instance
+                                    .collection('assignments')
+                                    .where('isPending', isEqualTo: true)
+                                    .snapshots(),
+                                builder: (context, assignSnap) {
+                                  final count = assignSnap.data?.docs.length ?? 0;
+                                  return _buildMiniStat(
+                                    title: 'Pending Tasks',
+                                    value: '$count',
+                                    subtitle: count == 0 ? 'All Complete' : 'Due this week',
+                                    icon: Icons.assignment_outlined,
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+
+                            // Stat 3: Scheduled Classes
+                            Expanded(
+                              child: StreamBuilder<QuerySnapshot>(
+                                stream: FirebaseFirestore.instance.collection('classes').snapshots(),
+                                builder: (context, classSnap) {
+                                  final count = classSnap.data?.docs.length ?? 0;
+                                  return _buildMiniStat(
+                                    title: 'Live Classes',
+                                    value: '$count',
+                                    subtitle: 'Available',
+                                    icon: Icons.video_call_outlined,
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+
+              // 2. QUICK ACTIONS
+              const Text(
+                'Quick Navigation',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _buildQuickActionButton(
+                    context,
+                    title: 'Live Zoom',
+                    icon: Icons.video_camera_front,
+                    color: const Color(0xFF2563EB),
+                    bgColor: const Color(0xFFEFF6FF),
+                    onTap: () => onNavigateTab?.call(1),
+                  ),
+                  const SizedBox(width: 10),
+                  _buildQuickActionButton(
+                    context,
+                    title: 'Assignments',
+                    icon: Icons.assignment,
+                    color: const Color(0xFFD97706),
+                    bgColor: const Color(0xFFFFFBEB),
+                    onTap: () => onNavigateTab?.call(2),
+                  ),
+                  const SizedBox(width: 10),
+                  _buildQuickActionButton(
+                    context,
+                    title: 'Attendance',
+                    icon: Icons.how_to_reg,
+                    color: const Color(0xFF059669),
+                    bgColor: const Color(0xFFECFDF5),
+                    onTap: () => onNavigateTab?.call(3),
+                  ),
+                  const SizedBox(width: 10),
+                  _buildQuickActionButton(
+                    context,
+                    title: 'My Profile',
+                    icon: Icons.person,
+                    color: const Color(0xFF7C3AED),
+                    bgColor: const Color(0xFFF5F3FF),
+                    onTap: () => onNavigateTab?.call(4),
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+
+              // 3. LIVE & UPCOMING CLASSES SECTION (REAL FIRESTORE)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Live & Upcoming Classes',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      foregroundColor: AppColors.primary,
+                    ),
+                    icon: const Icon(Icons.arrow_forward, size: 16),
+                    label: const Text('View All', style: TextStyle(fontWeight: FontWeight.w600)),
+                    onPressed: () => onNavigateTab?.call(1),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('classes').snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+                  if (docs.isEmpty) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.event_available, size: 40, color: Colors.grey[400]),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'No live classes scheduled currently.',
+                            style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Your educator will schedule upcoming sessions here.',
+                            style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  // Take top 2 classes
+                  final topClasses = docs.take(2).toList();
+                  return Column(
+                    children: topClasses.map((doc) {
+                      final c = doc.data() as Map<String, dynamic>;
+                      final title = c['classTitle'] ?? 'Live Classroom Session';
+                      final batch = c['batchName'] ?? 'All Enrolled Batches';
+                      final subject = c['subjectName'] ?? 'General Subject';
+                      final teacher = c['teacherName'] ?? 'Faculty Lecturer';
+                      final duration = c['durationMinutes'] ?? 60;
+                      final zoomLink = c['zoomLink'] ?? '';
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    subject.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: Color(0xFF1E40AF),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFD1FAE5),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Row(
+                                    children: [
+                                      CircleAvatar(radius: 3, backgroundColor: Color(0xFF059669)),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'LIVE ONLINE',
+                                        style: TextStyle(
+                                          color: Color(0xFF059669),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              title,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Instructor: $teacher • Batch: $batch • $duration mins',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 42,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2563EB),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.videocam, size: 18),
+                                label: const Text(
+                                  'Join Zoom Class Now',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                onPressed: () => _launchZoom(context, zoomLink),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+
+              // 4. ACTIVE ASSIGNMENTS SECTION (REAL FIRESTORE)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Pending Homework & Tasks',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      foregroundColor: AppColors.primary,
+                    ),
+                    icon: const Icon(Icons.arrow_forward, size: 16),
+                    label: const Text('View All', style: TextStyle(fontWeight: FontWeight.w600)),
+                    onPressed: () => onNavigateTab?.call(2),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('assignments')
+                    .where('isPending', isEqualTo: true)
+                    .limit(2)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+                  if (docs.isEmpty) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'No pending assignments. You are completely up to date!',
+                          style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: docs.map((d) {
+                      final task = d.data() as Map<String, dynamic>;
+                      final title = task['title'] ?? 'Assignment';
+                      final subject = task['subject'] ?? 'General';
+                      final dueDate = task['dueDate'] ?? 'This Week';
+                      final points = task['totalPoints'] ?? 100;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.assignment_outlined, color: Color(0xFFD97706)),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '$subject • Due: $dueDate • $points Pts',
+                                    style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: () => onNavigateTab?.call(2),
+                              child: const Text('Open', style: TextStyle(fontSize: 12)),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildHeaderStat(String value, String label) {
+  Widget _buildMiniStat({
+    required String title,
+    required String value,
+    required String subtitle,
+    required IconData icon,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white12,
+        color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Icon(icon, color: Colors.white, size: 16),
+          const SizedBox(height: 6),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
               color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
-            label,
-            style: const TextStyle(fontSize: 10, color: Colors.white70),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAttendanceHeaderStat(String studentId) {
-    return StreamBuilder<List<Batch>>(
-      stream: _studentService.streamEnrolledBatches(studentId),
-      builder: (context, batchSnapshot) {
-        final batches = batchSnapshot.data ?? [];
-        if (batches.isEmpty) {
-          return _buildHeaderStat('N/A', 'Attendance');
-        }
-
-        return FutureBuilder<Map<String, double>>(
-          future: _studentService.getAttendanceStats(
-            studentId,
-            batches.first.id,
-          ),
-          builder: (context, statsSnapshot) {
-            if (statsSnapshot.connectionState == ConnectionState.waiting) {
-              return _buildHeaderStat('...', 'Attendance');
-            }
-            final percentage = statsSnapshot.data?['percentage'] ?? 0;
-            final formatted = '${percentage.toStringAsFixed(0)}%';
-            return _buildHeaderStat(formatted, 'Attendance');
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildUpcomingClassCard(
-    BuildContext context,
-    ZoomClass zoomClass, {
-    required int index,
-  }) {
-    final gradients = <List<Color>>[
-      [const Color(0xFF1E40AF), const Color(0xFF3B82F6)],
-      [const Color(0xFF065F46), const Color(0xFF10B981)],
-      [const Color(0xFF7C3AED), const Color(0xFFA78BFA)],
-    ];
-    final gradient = gradients[index % gradients.length];
-
-    final status = zoomClass.isLive
-        ? 'LIVE'
-        : zoomClass.isUpcoming
-        ? 'UPCOMING'
-        : 'ENDED';
-
-    final timeLabel = _formatTime(zoomClass.scheduledDateTime, context);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1E40AF).withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 80,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: gradient,
-              ),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
-              ),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.laptop, color: Colors.white),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        zoomClass.classTitle,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        zoomClass.subjectId.isNotEmpty
-                            ? zoomClass.subjectId
-                            : zoomClass.batchId,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
-                          fontSize: 11,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    status,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 9,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDBEAFE),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.access_time,
-                            size: 12,
-                            color: Color(0xFF1E40AF),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            timeLabel,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Color(0xFF1E40AF),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${zoomClass.durationMinutes} min',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Color(0xFF475569),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                ElevatedButton(
-                  onPressed: zoomClass.isUpcoming || zoomClass.isLive
-                      ? () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Opening Zoom link: ${zoomClass.zoomLink}',
-                              ),
-                            ),
-                          );
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1E40AF),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    textStyle: const TextStyle(fontSize: 11),
-                  ),
-                  child: Text(zoomClass.isLive ? 'Join' : 'Upcoming'),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatTime(DateTime dateTime, BuildContext context) {
-    final time = TimeOfDay.fromDateTime(dateTime);
-    return MaterialLocalizations.of(context).formatTimeOfDay(time);
-  }
-
-  Widget _buildQuickAction(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required Color color,
-    required Color bgColor,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Center(child: Icon(icon, color: color, size: 24)),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-            maxLines: 2,
+            title,
+            style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600),
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionButton(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required Color color,
+    required Color bgColor,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: bgColor,
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
