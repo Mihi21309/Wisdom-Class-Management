@@ -332,102 +332,108 @@ class _AdminManageStudentsTabState extends State<AdminManageStudentsTab> {
     final studentIdCtrl = TextEditingController(
       text: 'STU-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
     );
-    String selectedBatch = '2026 A/L Science & Tech';
+    String? selectedBatch;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.person_add, color: AppColors.primary),
-            SizedBox(width: 8),
-            Text('Register New Student', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          title: const Row(
             children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Full Name *', hintText: 'e.g. Kasun Perera'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email Address *', hintText: 'kasun@wisdom.com'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: phoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Phone Contact *', hintText: '0771234567'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: studentIdCtrl,
-                decoration: const InputDecoration(labelText: 'Student ID *', hintText: 'STU-000000'),
-              ),
-              const SizedBox(height: 12),
-              StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('batches').snapshots(),
-                builder: (context, snapshot) {
-                  final docs = snapshot.data?.docs ?? [];
-                  if (docs.isEmpty) {
-                    return const Text('No batches registered in database yet.', style: TextStyle(color: Colors.grey, fontSize: 12));
-                  }
-                  if (selectedBatch.isEmpty && docs.isNotEmpty) {
-                    final firstData = docs.first.data() as Map<String, dynamic>;
-                    selectedBatch = firstData['name'] ?? docs.first.id;
-                  }
-                  return DropdownButtonFormField<String>(
-                    initialValue: selectedBatch.isNotEmpty ? selectedBatch : null,
-                    decoration: const InputDecoration(labelText: 'Select Batch from Database *'),
-                    items: docs.map((b) {
-                      final bdata = b.data() as Map<String, dynamic>;
-                      final bname = bdata['name'] ?? b.id;
-                      return DropdownMenuItem<String>(value: bname, child: Text(bname));
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) selectedBatch = val;
-                    },
-                  );
-                },
-              ),
+              Icon(Icons.person_add, color: AppColors.primary),
+              SizedBox(width: 8),
+              Text('Register New Student', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ],
           ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-            onPressed: () async {
-              if (nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Name and Email are required.')),
-                );
-                return;
-              }
-              Navigator.pop(ctx);
-              await FirebaseFirestore.instance.collection('students').add({
-                'name': nameCtrl.text.trim(),
-                'email': emailCtrl.text.trim(),
-                'phone': phoneCtrl.text.trim(),
-                'studentId': studentIdCtrl.text.trim(),
-                'enrolledBatches': [selectedBatch],
-                'enrolledSubjects': ['Combined Mathematics', 'Physics'],
-                'createdAt': FieldValue.serverTimestamp(),
-              });
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Student added to Firestore!')),
-                );
-              }
-            },
-            child: const Text('Create Student'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Full Name *', hintText: 'e.g. Kasun Perera'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: 'Email Address *', hintText: 'kasun@wisdom.com'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(labelText: 'Phone Contact *', hintText: '0771234567'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: studentIdCtrl,
+                  decoration: const InputDecoration(labelText: 'Student ID *', hintText: 'STU-000000'),
+                ),
+                const SizedBox(height: 12),
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('batches').snapshots(),
+                  builder: (context, snapshot) {
+                    final docs = snapshot.data?.docs ?? [];
+                    if (docs.isEmpty) {
+                      return const Text('No batches registered in database yet.', style: TextStyle(color: Colors.grey, fontSize: 12));
+                    }
+                    final uniqueBatches = docs.map((b) {
+                      final bdata = b.data() as Map<String, dynamic>;
+                      return (bdata['name'] ?? b.id).toString();
+                    }).toSet().toList();
+
+                    final validValue = uniqueBatches.contains(selectedBatch) ? selectedBatch : null;
+
+                    return DropdownButtonFormField<String>(
+                      initialValue: validValue,
+                      hint: const Text('Choose a batch from database...'),
+                      decoration: const InputDecoration(labelText: 'Select Batch from Database *'),
+                      items: uniqueBatches.map((bname) {
+                        return DropdownMenuItem<String>(value: bname, child: Text(bname));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setModalState(() => selectedBatch = val);
+                        }
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-        ],
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              onPressed: () async {
+                if (nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Name and Email are required.')),
+                  );
+                  return;
+                }
+                Navigator.pop(ctx);
+                await FirebaseFirestore.instance.collection('students').add({
+                  'name': nameCtrl.text.trim(),
+                  'email': emailCtrl.text.trim(),
+                  'phone': phoneCtrl.text.trim(),
+                  'studentId': studentIdCtrl.text.trim(),
+                  'enrolledBatches': [selectedBatch ?? 'General Batch'],
+                  'enrolledSubjects': [],
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Student added to Firestore!')),
+                  );
+                }
+              },
+              child: const Text('Create Student'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1070,12 +1076,14 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
                   stream: FirebaseFirestore.instance.collection('subjects').snapshots(),
                   builder: (context, snapshot) {
                     final docs = snapshot.data?.docs ?? [];
+                    final unique = docs.map((d) {
+                      final data = d.data() as Map<String, dynamic>;
+                      return (data['name'] ?? d.id).toString();
+                    }).toSet().toList();
                     return DropdownButtonFormField<String>(
                       decoration: const InputDecoration(labelText: 'Select Subject from Database *'),
-                      hint: Text(docs.isEmpty ? 'No subjects in database' : 'Choose subject...'),
-                      items: docs.map((d) {
-                        final data = d.data() as Map<String, dynamic>;
-                        final name = data['name'] ?? d.id;
+                      hint: Text(unique.isEmpty ? 'No subjects in database' : 'Choose subject...'),
+                      items: unique.map((name) {
                         return DropdownMenuItem<String>(value: name, child: Text(name));
                       }).toList(),
                       onChanged: (val) {
@@ -1090,12 +1098,14 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
                   stream: FirebaseFirestore.instance.collection('batches').snapshots(),
                   builder: (context, snapshot) {
                     final docs = snapshot.data?.docs ?? [];
+                    final unique = docs.map((d) {
+                      final data = d.data() as Map<String, dynamic>;
+                      return (data['name'] ?? d.id).toString();
+                    }).toSet().toList();
                     return DropdownButtonFormField<String>(
                       decoration: const InputDecoration(labelText: 'Select Target Batch from Database *'),
-                      hint: Text(docs.isEmpty ? 'No batches in database' : 'Choose batch...'),
-                      items: docs.map((d) {
-                        final data = d.data() as Map<String, dynamic>;
-                        final name = data['name'] ?? d.id;
+                      hint: Text(unique.isEmpty ? 'No batches in database' : 'Choose batch...'),
+                      items: unique.map((name) {
                         return DropdownMenuItem<String>(value: name, child: Text(name));
                       }).toList(),
                       onChanged: (val) {
@@ -1110,12 +1120,14 @@ class _AdminManageClassesTabState extends State<AdminManageClassesTab> {
                   stream: FirebaseFirestore.instance.collection('teachers').snapshots(),
                   builder: (context, snapshot) {
                     final docs = snapshot.data?.docs ?? [];
+                    final unique = docs.map((d) {
+                      final data = d.data() as Map<String, dynamic>;
+                      return (data['name'] ?? d.id).toString();
+                    }).toSet().toList();
                     return DropdownButtonFormField<String>(
                       decoration: const InputDecoration(labelText: 'Assign Faculty Teacher from Database *'),
-                      hint: Text(docs.isEmpty ? 'No teachers in database' : 'Choose teacher...'),
-                      items: docs.map((d) {
-                        final data = d.data() as Map<String, dynamic>;
-                        final name = data['name'] ?? d.id;
+                      hint: Text(unique.isEmpty ? 'No teachers in database' : 'Choose teacher...'),
+                      items: unique.map((name) {
                         return DropdownMenuItem<String>(value: name, child: Text(name));
                       }).toList(),
                       onChanged: (val) {

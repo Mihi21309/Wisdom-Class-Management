@@ -353,8 +353,9 @@ class _TeacherCreateClassTabState extends State<TeacherCreateClassTab> {
               stream: FirebaseFirestore.instance.collection('batches').snapshots(),
               builder: (context, snapshot) {
                 final docs = snapshot.data?.docs ?? [];
+                final validBatchId = docs.any((d) => d.id == _selectedBatchId) ? _selectedBatchId : null;
                 return DropdownButtonFormField<String>(
-                  initialValue: _selectedBatchId,
+                  initialValue: validBatchId,
                   decoration: InputDecoration(
                     hintText: docs.isEmpty ? 'No batches in Firestore' : 'Select target batch...',
                     filled: true,
@@ -391,8 +392,9 @@ class _TeacherCreateClassTabState extends State<TeacherCreateClassTab> {
               stream: FirebaseFirestore.instance.collection('subjects').snapshots(),
               builder: (context, snapshot) {
                 final docs = snapshot.data?.docs ?? [];
+                final validSubjectId = docs.any((d) => d.id == _selectedSubjectId) ? _selectedSubjectId : null;
                 return DropdownButtonFormField<String>(
-                  initialValue: _selectedSubjectId,
+                  initialValue: validSubjectId,
                   decoration: InputDecoration(
                     hintText: docs.isEmpty ? 'No subjects in Firestore' : 'Select subject...',
                     filled: true,

@@ -53,7 +53,7 @@ class AuthService {
         } else {
           // Resolve teacher ID
           final teacher = await _teacherService.getTeacherByTeacherId(input);
-          emailToUse = teacher?.email;
+          emailToUse = teacher?['email'] as String?;
         }
       }
 
