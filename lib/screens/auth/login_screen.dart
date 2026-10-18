@@ -119,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen>
         } else {
           // Try resolving teacher ID
           final teacher = await _teacherService.getTeacherByTeacherId(loginInput);
-          emailToUse = teacher?.email;
+          emailToUse = teacher?['email'] as String?;
         }
       }
 
