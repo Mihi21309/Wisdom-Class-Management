@@ -169,18 +169,27 @@ class _AttendanceTabState extends State<AttendanceTab> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Session History',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    const Expanded(
+                      child: Text(
+                        'Session History',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    Row(
-                      children: [
-                        _buildFilterPill('All', 0),
-                        const SizedBox(width: 6),
-                        _buildFilterPill('Present', 1),
-                        const SizedBox(width: 6),
-                        _buildFilterPill('Absent', 2),
-                      ],
+                    const SizedBox(width: 8),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildFilterPill('All', 0),
+                          const SizedBox(width: 6),
+                          _buildFilterPill('Present', 1),
+                          const SizedBox(width: 6),
+                          _buildFilterPill('Absent', 2),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -223,8 +232,8 @@ class _AttendanceTabState extends State<AttendanceTab> {
                       final rec = displayedRecords[i].data() as Map<String, dynamic>;
                       final status = (rec['status'] ?? 'present').toString().toLowerCase();
                       final isPresent = status == 'present';
-                      final classId = rec['classId'] ?? 'Live Session';
-                      final subject = rec['subjectId'] ?? 'General Subject';
+                      final classId = rec['classTitle'] ?? rec['topic'] ?? rec['className'] ?? rec['classId'] ?? 'Live Session';
+                      final subject = (rec['subjectName'] ?? rec['subject'] ?? rec['subjectId'] ?? 'General Subject').toString();
                       final dateStr = rec['date'] ?? 'Recent Session';
 
                       return Container(
@@ -237,36 +246,45 @@ class _AttendanceTabState extends State<AttendanceTab> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: isPresent
-                                      ? const Color(0xFF059669).withValues(alpha: 0.12)
-                                      : const Color(0xFFDC2626).withValues(alpha: 0.12),
-                                  child: Icon(
-                                    isPresent ? Icons.check : Icons.close,
-                                    size: 18,
-                                    color: isPresent ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: isPresent
+                                        ? const Color(0xFF059669).withValues(alpha: 0.12)
+                                        : const Color(0xFFDC2626).withValues(alpha: 0.12),
+                                    child: Icon(
+                                      isPresent ? Icons.check : Icons.close,
+                                      size: 18,
+                                      color: isPresent ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      subject.replaceAll('_', ' ').toUpperCase(),
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          subject.replaceAll('_', ' ').toUpperCase(),
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Session: $classId • Date: $dateStr',
+                                          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Session: $classId • Date: $dateStr',
-                                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 10),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(

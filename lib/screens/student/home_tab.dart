@@ -28,6 +28,49 @@ class HomeTab extends StatelessWidget {
     }
   }
 
+  Future<void> _confirmSignOut(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.logout, color: Color(0xFFDC2626), size: 22),
+            SizedBox(width: 10),
+            Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to sign out of the Wisdom Student Portal?',
+          style: TextStyle(fontSize: 14, color: Color(0xFF475569)),
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await FirebaseAuth.instance.signOut();
+      if (context.mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -52,12 +95,7 @@ class HomeTab extends StatelessWidget {
           IconButton(
             tooltip: 'Sign Out',
             icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              if (context.mounted) {
-                Navigator.of(context).pushReplacementNamed('/login');
-              }
-            },
+            onPressed: () => _confirmSignOut(context),
           ),
         ],
       ),
@@ -357,149 +395,215 @@ class HomeTab extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('classes').snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
+              StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance.collection('students').doc(uid).snapshots(),
+                builder: (context, studentSnap) {
+                  final sdata = studentSnap.data?.data() as Map<String, dynamic>?;
+                  final feeStatus = sdata?['feeStatus'] ?? 'Paid';
+                  final feeMonth = sdata?['feeMonth'] ?? 'Current Month';
+                  final isPaid = feeStatus == 'Paid';
+
+                  final enrolledBatches = <String>[];
+                  if (sdata?['enrolledBatches'] is List) {
+                    for (final b in (sdata!['enrolledBatches'] as List)) {
+                      if (b != null && b.toString().trim().isNotEmpty) {
+                        enrolledBatches.add(b.toString().trim().toLowerCase());
+                      }
+                    }
+                  }
+                  final singleBatch = (sdata?['batch'] ?? sdata?['batchName'])?.toString().trim();
+                  if (singleBatch != null && singleBatch.isNotEmpty && !enrolledBatches.contains(singleBatch.toLowerCase())) {
+                    enrolledBatches.add(singleBatch.toLowerCase());
                   }
 
-                  final docs = snapshot.data?.docs ?? [];
-                  if (docs.isEmpty) {
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(Icons.event_available, size: 40, color: Colors.grey[400]),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'No live classes scheduled currently.',
-                            style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Your educator will schedule upcoming sessions here.',
-                            style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance.collection('classes').snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
 
-                  // Take top 2 classes
-                  final topClasses = docs.take(2).toList();
-                  return Column(
-                    children: topClasses.map((doc) {
-                      final c = doc.data() as Map<String, dynamic>;
-                      final title = c['classTitle'] ?? 'Live Classroom Session';
-                      final batch = c['batchName'] ?? 'All Enrolled Batches';
-                      final subject = c['subjectName'] ?? 'General Subject';
-                      final teacher = c['teacherName'] ?? 'Teacher';
-                      final duration = c['durationMinutes'] ?? 60;
-                      final zoomLink = c['zoomLink'] ?? '';
+                      final allDocs = snapshot.data?.docs ?? [];
+                      final docs = allDocs.where((doc) {
+                        final c = doc.data() as Map<String, dynamic>;
+                        final classBatch = (c['batchName'] ?? '').toString().trim();
+                        if (classBatch.isEmpty ||
+                            classBatch.toLowerCase() == 'all batches' ||
+                            classBatch.toLowerCase() == 'all enrolled batches' ||
+                            classBatch.toLowerCase() == 'enrolled students' ||
+                            enrolledBatches.isEmpty) {
+                          return true;
+                        }
+                        return enrolledBatches.contains(classBatch.toLowerCase());
+                      }).toList();
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.03),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEFF6FF),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    subject.toUpperCase(),
-                                    style: const TextStyle(
-                                      color: Color(0xFF1E40AF),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFD1FAE5),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Row(
-                                    children: [
-                                      CircleAvatar(radius: 3, backgroundColor: Color(0xFF059669)),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'LIVE ONLINE',
-                                        style: TextStyle(
-                                          color: Color(0xFF059669),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                      if (docs.isEmpty) {
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(Icons.event_available, size: 40, color: Colors.grey[400]),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'No live classes scheduled currently.',
+                                style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                enrolledBatches.isNotEmpty
+                                    ? 'Sessions scheduled for your batch will appear here.'
+                                    : 'Your educator will schedule upcoming sessions here.',
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      // Take top 2 classes
+                      final topClasses = docs.take(2).toList();
+                      return Column(
+                        children: topClasses.map((doc) {
+                          final c = doc.data() as Map<String, dynamic>;
+                          final title = c['classTitle'] ?? 'Live Classroom Session';
+                          final batch = c['batchName'] ?? 'All Enrolled Batches';
+                          final subject = c['subjectName'] ?? 'General Subject';
+                          final teacher = c['teacherName'] ?? 'Teacher';
+                          final duration = c['durationMinutes'] ?? 60;
+                          final zoomLink = c['zoomLink'] ?? '';
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isPaid ? const Color(0xFFE2E8F0) : const Color(0xFFFECACA),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 10),
-                            Text(
-                              title,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Instructor: $teacher • Batch: $batch • $duration mins',
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 42,
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2563EB),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEFF6FF),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        subject.toUpperCase(),
+                                        style: const TextStyle(
+                                          color: Color(0xFF1E40AF),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: isPaid ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 3,
+                                            backgroundColor: isPaid ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            isPaid ? 'LIVE ONLINE' : 'FEE DUE • LOCKED',
+                                            style: TextStyle(
+                                              color: isPaid ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  title,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Instructor: $teacher • Batch: $batch • $duration mins',
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                ),
+                                const SizedBox(height: 12),
+                                if (isPaid)
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 42,
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF2563EB),
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      icon: const Icon(Icons.videocam, size: 18),
+                                      label: const Text(
+                                        'Join Zoom Class Now',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                      onPressed: () => _launchZoom(context, zoomLink),
+                                    ),
+                                  )
+                                else
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFEF2F2),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFFFECACA)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.lock_rounded, size: 18, color: Color(0xFFDC2626)),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Tuition fee for $feeMonth is pending. Settle fee at reception to unlock live Zoom meeting.',
+                                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF991B1B)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                icon: const Icon(Icons.videocam, size: 18),
-                                label: const Text(
-                                  'Join Zoom Class Now',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                onPressed: () => _launchZoom(context, zoomLink),
-                              ),
+                              ],
                             ),
-                          ],
-                        ),
+                          );
+                        }).toList(),
                       );
-                    }).toList(),
+                    },
                   );
                 },
               ),

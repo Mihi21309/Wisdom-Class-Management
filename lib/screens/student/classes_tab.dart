@@ -74,204 +74,316 @@ class _ClassesTabState extends State<ClassesTab> with SingleTickerProviderStateM
       body: TabBarView(
         controller: _tabController,
         children: [
-          // TAB 1: LIVE SESSIONS (FIRESTORE 'classes')
-          _buildLiveSessionsList(context),
+          // TAB 1: LIVE SESSIONS (BATCH FILTERED & FEE GATED)
+          _buildLiveSessionsList(context, uid),
 
-          // TAB 2: ENROLLED BATCHES & SUBJECTS (FIRESTORE 'batches' & 'students')
+          // TAB 2: ENROLLED BATCHES & CURRICULUM (FIRESTORE 'batches' & 'students')
           _buildBatchesAndCurriculum(context, uid),
         ],
       ),
     );
   }
 
-  Widget _buildLiveSessionsList(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('classes').snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+  Widget _buildLiveSessionsList(BuildContext context, String uid) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('students').doc(uid).snapshots(),
+      builder: (context, studentSnap) {
+        final sdata = studentSnap.data?.data() as Map<String, dynamic>?;
+        final feeStatus = sdata?['feeStatus'] ?? 'Paid';
+        final feeMonth = sdata?['feeMonth'] ?? 'Current Month';
+        final isPaid = feeStatus == 'Paid';
+
+        // Extract student's enrolled batches
+        final enrolledBatches = <String>[];
+        if (sdata?['enrolledBatches'] is List) {
+          for (final b in (sdata!['enrolledBatches'] as List)) {
+            if (b != null && b.toString().trim().isNotEmpty) {
+              enrolledBatches.add(b.toString().trim().toLowerCase());
+            }
+          }
+        }
+        final singleBatch = (sdata?['batch'] ?? sdata?['batchName'])?.toString().trim();
+        if (singleBatch != null && singleBatch.isNotEmpty && !enrolledBatches.contains(singleBatch.toLowerCase())) {
+          enrolledBatches.add(singleBatch.toLowerCase());
         }
 
-        final docs = snapshot.data?.docs ?? [];
-        if (docs.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.video_camera_back_outlined, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'No Scheduled Live Sessions',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'When your teachers schedule Zoom sessions in the Educator portal, they will appear here in real-time.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('classes').snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-        return ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: docs.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 14),
-          itemBuilder: (context, index) {
-            final data = docs[index].data() as Map<String, dynamic>;
-            final title = data['classTitle'] ?? 'Live Classroom Session';
-            final batch = data['batchName'] ?? 'Enrolled Students';
-            final subject = data['subjectName'] ?? 'Core Subject';
-            final teacher = data['teacherName'] ?? 'Teacher';
-            final zoomLink = data['zoomLink'] ?? '';
-            final duration = data['durationMinutes'] ?? 60;
-            final dateStr = data['date'] ?? 'Upcoming Today';
-            final timeStr = data['time'] ?? 'Class Time';
+            final allDocs = snapshot.data?.docs ?? [];
+            
+            // Filter classes by enrolled batch
+            final docs = allDocs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final classBatch = (data['batchName'] ?? '').toString().trim();
+              if (classBatch.isEmpty ||
+                  classBatch.toLowerCase() == 'all batches' ||
+                  classBatch.toLowerCase() == 'all enrolled batches' ||
+                  classBatch.toLowerCase() == 'enrolled students' ||
+                  enrolledBatches.isEmpty) {
+                return true;
+              }
+              return enrolledBatches.contains(classBatch.toLowerCase());
+            }).toList();
 
-            return Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            if (docs.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          subject,
-                          style: const TextStyle(
-                            color: Color(0xFF1E40AF),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
+                      Icon(Icons.video_camera_back_outlined, size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'No Scheduled Live Sessions',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD1FAE5),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Row(
-                          children: [
-                            CircleAvatar(radius: 3.5, backgroundColor: Color(0xFF059669)),
-                            SizedBox(width: 4),
-                            Text(
-                              'READY TO JOIN',
-                              style: TextStyle(
-                                color: Color(0xFF059669),
+                      const SizedBox(height: 8),
+                      Text(
+                        enrolledBatches.isNotEmpty
+                            ? 'When live classes are scheduled for your batch, they will appear here in real-time.'
+                            : 'When your teachers schedule Zoom sessions, they will appear here in real-time.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: docs.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 14),
+              itemBuilder: (context, index) {
+                final data = docs[index].data() as Map<String, dynamic>;
+                final title = data['classTitle'] ?? 'Live Classroom Session';
+                final batch = data['batchName'] ?? 'Enrolled Students';
+                final subject = data['subjectName'] ?? 'Core Subject';
+                final teacher = data['teacherName'] ?? 'Teacher';
+                final zoomLink = data['zoomLink'] ?? '';
+                final duration = data['durationMinutes'] ?? 60;
+                final dateStr = data['date'] ?? 'Upcoming Today';
+                final timeStr = data['time'] ?? 'Class Time';
+
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isPaid ? const Color(0xFFE2E8F0) : const Color(0xFFFECACA),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              subject,
+                              style: const TextStyle(
+                                color: Color(0xFF1E40AF),
                                 fontWeight: FontWeight.bold,
-                                fontSize: 10,
+                                fontSize: 12,
                               ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isPaid ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 3.5,
+                                  backgroundColor: isPaid ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  isPaid ? 'READY TO JOIN' : 'FEE DUE • LOCKED',
+                                  style: TextStyle(
+                                    color: isPaid ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        title,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A)),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(Icons.person_outline, size: 14, color: Color(0xFF64748B)),
+                          const SizedBox(width: 4),
+                          Text(teacher, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                          const SizedBox(width: 12),
+                          const Icon(Icons.access_time, size: 14, color: Color(0xFF64748B)),
+                          const SizedBox(width: 4),
+                          Text('$duration mins ($timeStr)', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today_outlined, size: 14, color: Color(0xFF64748B)),
+                          const SizedBox(width: 4),
+                          Text('Batch: $batch • Date: $dateStr', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Fee-gated action buttons
+                      if (isPaid) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2563EB),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                icon: const Icon(Icons.videocam, size: 18),
+                                label: const Text('Join Zoom Meeting', style: TextStyle(fontWeight: FontWeight.bold)),
+                                onPressed: () => _launchZoom(context, zoomLink),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              style: IconButton.styleFrom(
+                                backgroundColor: const Color(0xFFF1F5F9),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              icon: const Icon(Icons.copy, size: 18, color: Color(0xFF475569)),
+                              tooltip: 'Copy Link',
+                              onPressed: () {
+                                if (zoomLink.isNotEmpty) {
+                                  Clipboard.setData(ClipboardData(text: zoomLink));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Zoom link copied to clipboard!')),
+                                  );
+                                }
+                              },
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A)),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.person_outline, size: 14, color: Color(0xFF64748B)),
-                      const SizedBox(width: 4),
-                      Text(teacher, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                      const SizedBox(width: 12),
-                      const Icon(Icons.access_time, size: 14, color: Color(0xFF64748B)),
-                      const SizedBox(width: 4),
-                      Text('$duration mins ($timeStr)', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_today_outlined, size: 14, color: Color(0xFF64748B)),
-                      const SizedBox(width: 4),
-                      Text('Batch: $batch • Date: $dateStr', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Action Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2563EB),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        if ((data['recordingLink'] ?? '').toString().trim().isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF7C3AED),
+                                side: const BorderSide(color: Color(0xFF7C3AED)),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              icon: const Icon(Icons.play_circle_fill, size: 18),
+                              label: const Text('Watch Class Recording / Replay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              onPressed: () => _launchZoom(context, data['recordingLink']),
+                            ),
                           ),
-                          icon: const Icon(Icons.videocam, size: 18),
-                          label: const Text('Join Zoom Meeting', style: TextStyle(fontWeight: FontWeight.bold)),
-                          onPressed: () => _launchZoom(context, zoomLink),
+                        ],
+                      ] else ...[
+                        // Fee Due Locked Banner (Zoom link hidden)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFECACA)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEE2E2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.lock_rounded, color: Color(0xFFDC2626), size: 22),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Live Zoom Link Locked',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF991B1B)),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Tuition fee for $feeMonth is pending. Please verify your payment at the reception or contact admin to unlock this live session.',
+                                      style: const TextStyle(fontSize: 11, color: Color(0xFFB91C1C), height: 1.3),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        style: IconButton.styleFrom(
-                          backgroundColor: const Color(0xFFF1F5F9),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFDC2626),
+                              side: const BorderSide(color: Color(0xFFFCA5A5)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            icon: const Icon(Icons.lock_outline, size: 16),
+                            label: Text(
+                              'Tuition Fee Due for $feeMonth (Locked)',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                            ),
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  backgroundColor: const Color(0xFFDC2626),
+                                  content: Text('Please settle tuition fee for $feeMonth to join this live Zoom meeting.'),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                        icon: const Icon(Icons.copy, size: 18, color: Color(0xFF475569)),
-                        tooltip: 'Copy Link',
-                        onPressed: () {
-                          if (zoomLink.isNotEmpty) {
-                            Clipboard.setData(ClipboardData(text: zoomLink));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Zoom link copied to clipboard!')),
-                            );
-                          }
-                        },
-                      ),
+                      ],
                     ],
                   ),
-                  if ((data['recordingLink'] ?? '').toString().trim().isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF7C3AED),
-                          side: const BorderSide(color: Color(0xFF7C3AED)),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        icon: const Icon(Icons.play_circle_fill, size: 18),
-                        label: const Text('Watch Class Recording / Replay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        onPressed: () => _launchZoom(context, data['recordingLink']),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+                );
+              },
             );
           },
         );

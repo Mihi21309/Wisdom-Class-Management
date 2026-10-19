@@ -86,15 +86,19 @@ class _AssignmentsTabState extends State<AssignmentsTab> {
                   ),
                   const SizedBox(height: 14),
 
-                  // Filter Chips
-                  Row(
-                    children: [
-                      _buildFilterChip('All Tasks', 0),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('To Do', 1),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('Completed', 2),
-                    ],
+                  // Filter Chips (Horizontally Scrollable)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: [
+                        _buildFilterChip('All Tasks', 0),
+                        const SizedBox(width: 8),
+                        _buildFilterChip('To Do', 1),
+                        const SizedBox(width: 8),
+                        _buildFilterChip('Completed', 2),
+                      ],
+                    ),
                   ),
                 ],
               ),

@@ -27,8 +27,6 @@ class _CreateStudentScreenState extends State<CreateStudentScreen> {
 
   final Set<String> _selectedSubjectIds = {};
   bool _isLoading = false;
-  String? _generatedStudentId;
-  String? _generatedPassword;
 
   @override
   void dispose() {
@@ -62,11 +60,6 @@ class _CreateStudentScreenState extends State<CreateStudentScreen> {
       );
 
       if (mounted) {
-        setState(() {
-          _generatedStudentId = result['studentId'];
-          _generatedPassword = result['tempPassword'];
-        });
-
         // Show success dialog with credentials
         _showSuccessDialog(
           studentId: result['studentId']!,
